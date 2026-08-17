@@ -1,64 +1,254 @@
+/* ============================================================
+   AUTH — pantalla de login split-screen y bloque de sesión en
+   el sidebar (nombre del usuario + cerrar sesión).
+   ============================================================ */
+
 #quantis-auth-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.75);
+  z-index: 9999;
+  font-family: var(--font);
+  background: var(--bg);
+}
+
+/* --- Layout split-screen --- */
+
+.quantis-auth-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  height: 100%;
+}
+
+.quantis-auth-left {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 48px;
+  overflow: hidden;
+  background: radial-gradient(
+      circle at 20% 15%,
+      rgba(0, 200, 83, 0.35),
+      transparent 45%
+    ),
+    radial-gradient(circle at 85% 80%, rgba(0, 200, 83, 0.18), transparent 50%),
+    linear-gradient(160deg, #0c0f11 0%, #17191c 55%, #10231a 100%);
+}
+
+.quantis-auth-left::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 26px 26px;
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.quantis-auth-logo {
+  height: 28px;
+  position: relative;
+  z-index: 1;
+}
+
+.quantis-auth-quote {
+  position: relative;
+  z-index: 1;
+  color: #fff;
+  max-width: 420px;
+}
+
+.quantis-auth-quote p {
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 1.35;
+  margin-bottom: 14px;
+}
+
+.quantis-auth-quote span {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.quantis-auth-right {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 9999;
+  background: var(--bg);
+  padding: 32px;
 }
 
 .quantis-auth-box {
-  width: 320px;
-  max-width: 90vw;
-  padding: 28px;
-  border-radius: 12px;
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  text-align: center;
-  font-family: "Syne", sans-serif;
+  width: 100%;
+  max-width: 360px;
 }
 
 .quantis-auth-box h2 {
-  margin: 0 0 4px;
-  letter-spacing: 1px;
+  font-size: 22px;
+  font-weight: 600;
   color: var(--text);
+  margin-bottom: 6px;
 }
 
 .quantis-auth-sub {
   color: var(--text2);
-  margin-bottom: 16px;
   font-size: 13px;
+  margin-bottom: 28px;
 }
 
 #quantis-auth-form {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 14px;
+}
+
+#quantis-auth-form label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text2);
+  margin-bottom: -8px;
 }
 
 #quantis-auth-form input {
-  padding: 10px 12px;
-  border-radius: 8px;
+  padding: 11px 14px;
+  border-radius: var(--rs);
   border: 1px solid var(--border2);
   background: var(--bg3);
   color: var(--text);
-  font-family: "DM Mono", monospace;
+  font-family: var(--mono);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+#quantis-auth-form input:focus {
+  border-color: var(--acc);
 }
 
 #quantis-auth-form button {
-  margin-top: 6px;
-  padding: 10px 12px;
-  border-radius: 8px;
+  margin-top: 8px;
+  padding: 12px 14px;
+  border-radius: var(--rs);
   border: none;
-  background: var(--bg4);
-  color: var(--text);
+  background: var(--acc);
+  color: #08150e;
+  font-family: var(--font);
   font-weight: 600;
+  font-size: 14px;
   cursor: pointer;
+  transition: filter 0.15s ease;
+}
+
+#quantis-auth-form button:hover {
+  filter: brightness(1.08);
 }
 
 .quantis-auth-error {
-  color: #ff6b6b;
-  font-size: 13px;
+  color: var(--red);
+  font-size: 12.5px;
   margin: 0;
+}
+
+/* --- Pantalla de error de conexión (sin split, centrada) --- */
+
+.quantis-auth-center {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.quantis-auth-center .quantis-auth-box {
+  text-align: center;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 32px;
+}
+
+.quantis-auth-center button {
+  margin-top: 16px;
+  padding: 10px 18px;
+  border-radius: var(--rs);
+  border: 1px solid var(--border2);
+  background: var(--bg3);
+  color: var(--text);
+  cursor: pointer;
+}
+
+@media (max-width: 720px) {
+  .quantis-auth-split {
+    grid-template-columns: 1fr;
+  }
+  .quantis-auth-left {
+    display: none;
+  }
+}
+
+/* --- Bloque de sesión en el sidebar --- */
+
+.sidebar-session {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  margin-top: 8px;
+  border-radius: var(--rs);
+  background: var(--bg3);
+  border: 1px solid var(--border);
+}
+
+.sidebar-session-user {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.sidebar-session-avatar {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--abg);
+  color: var(--acc);
+  font-family: var(--font);
+  font-weight: 700;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sidebar-session-name {
+  font-size: 12.5px;
+  color: var(--text2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-session-logout {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--rs);
+  border: none;
+  background: transparent;
+  color: var(--text2);
+  cursor: pointer;
+}
+
+.sidebar-session-logout:hover {
+  background: var(--rbg);
+  color: var(--red);
+}
+
+.sidebar-session-logout .material-symbols-outlined {
+  font-size: 17px;
 }

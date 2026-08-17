@@ -81,7 +81,8 @@ function go(page, el) {
 }
 
 async function init() {
-  await Auth.requireSession();
+  const user = await Auth.requireSession();
+  Auth.renderSessionInfo(user);
   Auth.startInactivityWatcher();
   Toast.showQueuedToast();
   await State.load();

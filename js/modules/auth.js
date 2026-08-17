@@ -24,15 +24,28 @@ function renderLoginForm(onSubmit, errorMsg) {
   }
 
   overlay.innerHTML = `
-    <div class="quantis-auth-box">
-      <h2>QUANTIS</h2>
-      <p class="quantis-auth-sub">Inicia sesión para continuar</p>
-      <form id="quantis-auth-form">
-        <input type="email" id="quantis-auth-email" placeholder="Correo" required autocomplete="username" />
-        <input type="password" id="quantis-auth-password" placeholder="Contraseña" required autocomplete="current-password" />
-        ${errorMsg ? `<p class="quantis-auth-error">${errorMsg}</p>` : ""}
-        <button type="submit">Entrar</button>
-      </form>
+    <div class="quantis-auth-split">
+      <div class="quantis-auth-left">
+        <img src="img/quantis-white.svg" alt="Quantis" class="quantis-auth-logo" />
+        <div class="quantis-auth-quote">
+          <p>Cada operación, cada patrón, en un solo lugar.</p>
+          <span>Tu diario de trading</span>
+        </div>
+      </div>
+      <div class="quantis-auth-right">
+        <div class="quantis-auth-box">
+          <h2>Bienvenido de nuevo</h2>
+          <p class="quantis-auth-sub">Inicia sesión para continuar en QUANTIS</p>
+          <form id="quantis-auth-form">
+            <label for="quantis-auth-email">Correo</label>
+            <input type="email" id="quantis-auth-email" placeholder="tucorreo@ejemplo.com" required autocomplete="username" />
+            <label for="quantis-auth-password">Contraseña</label>
+            <input type="password" id="quantis-auth-password" placeholder="••••••••" required autocomplete="current-password" />
+            ${errorMsg ? `<p class="quantis-auth-error">${errorMsg}</p>` : ""}
+            <button type="submit">Entrar</button>
+          </form>
+        </div>
+      </div>
     </div>
   `;
 
@@ -54,10 +67,12 @@ function renderConnectionError(message, onRetry) {
   }
 
   overlay.innerHTML = `
-    <div class="quantis-auth-box">
-      <h2>QUANTIS</h2>
-      <p class="quantis-auth-error">${message}</p>
-      <button id="quantis-auth-retry">Reintentar</button>
+    <div class="quantis-auth-center">
+      <div class="quantis-auth-box">
+        <h2>QUANTIS</h2>
+        <p class="quantis-auth-error">${message}</p>
+        <button id="quantis-auth-retry">Reintentar</button>
+      </div>
     </div>
   `;
 
@@ -122,6 +137,26 @@ export async function logout() {
   const supabase = await getSupabase();
   await supabase.auth.signOut();
   window.location.reload();
+}
+
+/** Pinta el nombre del usuario logueado + botón de cerrar sesión al
+ * final del sidebar. Llamar una vez ya con sesión activa. */
+export function renderSessionInfo(user, containerId = "sidebar-session") {
+  const container = document.getElementById(containerId);
+  if (!container || !user) return;
+
+  const label = user.email || "Usuario";
+  const initial = label.trim().charAt(0).toUpperCase() || "?";
+
+  container.innerHTML = `
+    <div class="sidebar-session-user" data-tooltip="${label}">
+      <span class="sidebar-session-avatar">${initial}</span>
+      <span class="sidebar-session-name">${label}</span>
+    </div>
+    <button class="sidebar-session-logout" data-tooltip="Cerrar sesión" onclick="logout()">
+      <span class="material-symbols-outlined">logout</span>
+    </button>
+  `;
 }
 
 /* ============================================================
