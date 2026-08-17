@@ -1,0 +1,2325 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Quantis</title>
+    <link rel="stylesheet" href="./css/style.css" />
+    <link rel="stylesheet" href="./css/auth.css" />
+    <link
+      rel="shortcut icon"
+      href="img/quantis_favicon32x32.png"
+      type="image/x-icon"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  </head>
+  <body>
+    <div id="toast-container"></div>
+    <div class="modal-bg" id="modal-ch">
+      <div class="modal">
+        <div class="modal-title" id="modal-ch-title">Nuevo challenge</div>
+        <div class="fg">
+          <label>Nombre del challenge</label
+          ><input
+            type="text"
+            id="ch-nombre"
+            placeholder="FTMO $10k — Intento #1"
+          />
+        </div>
+        <div class="fr">
+          <div class="fg">
+            <label>Firma / Broker</label
+            ><input
+              type="text"
+              id="ch-firma"
+              placeholder="FTMO, MyFF, The5ers..."
+            />
+          </div>
+          <div class="fg">
+            <label>Tamano de cuenta ($)</label
+            ><input type="number" id="ch-size" value="5000" />
+          </div>
+        </div>
+        <div class="fg">
+          <label>Conjunto de reglas (opcional)</label
+          ><select id="ch-ruleset" onchange="applyRuleSetToChallenge()">
+            <option value="">Ninguno (valores manuales)</option>
+          </select>
+        </div>
+        <div class="fr3">
+          <div class="fg">
+            <label>Objetivo (%)</label
+            ><input type="number" id="ch-target" value="10" step="0.5" />
+          </div>
+          <div class="fg">
+            <label>Perdida max diaria (%)</label
+            ><input type="number" id="ch-maxday" value="5" step="0.5" />
+          </div>
+          <div class="fg">
+            <label>Perdida max total (%)</label
+            ><input type="number" id="ch-maxtotal" value="10" step="0.5" />
+          </div>
+        </div>
+        <div class="fr">
+          <div class="fg">
+            <label>Fecha inicio</label><input type="date" id="ch-inicio" />
+          </div>
+          <div class="fg">
+            <label>Dias limite (0=sin limite)</label
+            ><input type="number" id="ch-dias" value="0" />
+          </div>
+        </div>
+        <div class="fr">
+          <div class="fg">
+            <label>Riesgo por trade (%)</label
+            ><input type="number" id="ch-riesgo" value="1" step="0.1" />
+          </div>
+          <div class="fg">
+            <label>Tipo de riesgo</label
+            ><select id="ch-tiporiesgo">
+              <option value="Fijo">Fijo</option>
+              <option value="Dinamico">Dinámico</option>
+            </select>
+          </div>
+        </div>
+        <div class="fr">
+          <div class="fg">
+            <label>Fase</label
+            ><select id="ch-fase">
+              <option>Evaluacion</option>
+              <option>Propia</option>
+              <option>Cuenta fondeada</option>
+              <option>Demo</option>
+            </select>
+          </div>
+        </div>
+        <div style="display: flex; gap: 8px; margin-top: 6px">
+          <button class="btn btn-p" onclick="saveChallenge()">Guardar</button>
+          <button class="btn" onclick="closeModal('modal-ch')">Cancelar</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-bg" id="modal-tpl">
+      <div class="modal">
+        <div class="modal-title">Nueva plantilla de setup</div>
+        <div class="fg">
+          <label>Nombre</label
+          ><input
+            type="text"
+            id="tpl-nombre"
+            placeholder="Ej: Ruptura alcista 4H+15M"
+          />
+        </div>
+        <div class="fr">
+          <div class="fg">
+            <label>Par</label
+            ><select id="tpl-par" class="instrument-select"></select>
+          </div>
+          <div class="fg">
+            <label>Direccion</label
+            ><select id="tpl-dir">
+              <option>Compra</option>
+              <option>Venta</option>
+            </select>
+          </div>
+        </div>
+        <div class="fr">
+          <div class="fg">
+            <label>Tipo</label
+            ><select id="tpl-tipo">
+              <option>Fase de continuidad</option>
+              <option>Fase de Pullback</option>
+              <option>Fase de Rango</option>
+              <option>Fase de Ruptura</option>
+            </select>
+          </div>
+          <div class="fg">
+            <label>Sesion</label
+            ><select id="tpl-ses">
+              <option>NY</option>
+              <option>Londres</option>
+              <option>Asia</option>
+            </select>
+          </div>
+        </div>
+        <div class="fg">
+          <label>Descripcion del setup</label
+          ><textarea
+            id="tpl-desc"
+            placeholder="Condiciones, TF, criterios especificos..."
+          ></textarea>
+        </div>
+        <div style="display: flex; gap: 8px; margin-top: 6px">
+          <button class="btn btn-p" onclick="savePlantilla()">Guardar</button>
+          <button class="btn" onclick="closeModal('modal-tpl')">
+            Cancelar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-bg" id="modal-rs">
+      <div class="modal">
+        <div class="modal-title" id="modal-rs-title">
+          Nuevo conjunto de reglas
+        </div>
+        <div class="fg">
+          <label>Nombre</label
+          ><input
+            type="text"
+            id="rs-nombre"
+            placeholder="Ej: Mi firma personalizada"
+          />
+        </div>
+        <div class="fr">
+          <div class="fg">
+            <label>Daily Drawdown (%)</label
+            ><input type="number" id="rs-dailydd" step="0.1" value="5" />
+          </div>
+          <div class="fg">
+            <label>Max Drawdown (%)</label
+            ><input type="number" id="rs-maxdd" step="0.1" value="10" />
+          </div>
+        </div>
+        <div class="fr">
+          <div class="fg">
+            <label>Profit Target (%)</label
+            ><input type="number" id="rs-target" step="0.1" value="10" />
+          </div>
+          <div class="fg">
+            <label>Riesgo máximo por trade (%)</label
+            ><input type="number" id="rs-maxrisk" step="0.1" value="1" />
+          </div>
+        </div>
+        <div class="fg">
+          <label style="text-transform: none; letter-spacing: normal"
+            >Las siguientes son opcionales — déjalas vacías para desactivar esa
+            regla</label
+          >
+        </div>
+        <div class="fr">
+          <div class="fg">
+            <label>Consistency Rule (%)</label
+            ><input
+              type="number"
+              id="rs-consistency"
+              step="0.1"
+              placeholder="Ej: 30"
+            />
+          </div>
+          <div class="fg">
+            <label>Días mínimos de trading</label
+            ><input
+              type="number"
+              id="rs-mindays"
+              step="1"
+              placeholder="Ej: 5"
+            />
+          </div>
+        </div>
+        <div class="fr">
+          <div class="fg">
+            <label>Riesgo acumulado del día (%)</label
+            ><input
+              type="number"
+              id="rs-dailyrisk"
+              step="0.1"
+              placeholder="Ej: 2"
+            />
+          </div>
+          <div class="fg">
+            <label>Máx. operaciones por día</label
+            ><input
+              type="number"
+              id="rs-maxtrades"
+              step="1"
+              placeholder="Ej: 3"
+            />
+          </div>
+        </div>
+        <div class="fr">
+          <div class="fg">
+            <label>Límite de pérdida semanal (%)</label
+            ><input
+              type="number"
+              id="rs-weeklyloss"
+              step="0.1"
+              placeholder="Ej: 4"
+            />
+          </div>
+          <div class="fg">
+            <label>Max Position Size</label
+            ><input
+              type="number"
+              id="rs-maxpos"
+              step="0.01"
+              placeholder="No evaluado aún"
+            />
+          </div>
+        </div>
+        <div style="display: flex; gap: 8px; margin-top: 6px">
+          <button class="btn btn-p" onclick="submitRuleSetForm()">
+            Guardar
+          </button>
+          <button class="btn" onclick="closeModal('modal-rs')">Cancelar</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-bg" id="modal-preventive">
+      <div class="modal">
+        <div class="modal-title" style="color: var(--red)">
+          ⛔ Este trade rompería una regla de tu Challenge
+        </div>
+        <div style="font-size: 12px; color: var(--text3); margin-bottom: 10px">
+          Si guardas este trade tal como está, las siguientes reglas pasarían de
+          estar bien a estar en violación:
+        </div>
+        <div id="preventive-list"></div>
+        <div style="display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap">
+          <button class="btn btn-d" onclick="confirmSaveTradeAnyway()">
+            Guardar de todas formas
+          </button>
+          <button class="btn" onclick="editPreventiveTrade()">
+            Editar el trade
+          </button>
+          <button class="btn" onclick="cancelPreventiveTrade()">
+            Cancelar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div
+      class="modal-bg"
+      id="modal-settings"
+      onclick="if (event.target === this) closeSettings();"
+    >
+      <div class="modal settings-modal">
+        <div class="settings-modal-header">
+          <div class="modal-title" style="margin: 0">Configuración</div>
+          <button
+            class="settings-modal-close"
+            onclick="closeSettings()"
+            aria-label="Cerrar configuración"
+          >
+            ✕
+          </button>
+        </div>
+        <div class="settings-modal-body">
+          <div class="settings-nav" id="settings-nav"></div>
+          <div class="settings-content" id="settings-content"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="shell">
+      <div class="mobile-topbar">
+        <button
+          class="mobile-menu-btn"
+          onclick="toggleSidebar()"
+          aria-label="Abrir menú"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="18" x2="21" y2="18" />
+          </svg>
+        </button>
+      </div>
+      <div
+        class="sidebar-overlay"
+        id="sidebar-overlay"
+        onclick="toggleSidebar()"
+      ></div>
+      <nav class="sidebar" id="sidebar">
+        <div class="brand">
+          <div>
+            <div class="brand-title">
+              <img
+                src="img/quantis-white.svg"
+                alt="Quantis"
+                class="brand-logo logo-dark-theme"
+              />
+              <img
+                src="img/quantis.svg"
+                alt="Quantis"
+                class="brand-logo logo-light-theme"
+              />
+              <span>v4.8</span>
+            </div>
+            <div class="brand-sub" id="today-str"></div>
+          </div>
+          <button
+            id="theme-toggle"
+            class="theme-btn"
+            onclick="toggleTheme()"
+            data-tooltip="Cambiar a modo oscuro"
+          >
+            <span class="material-symbols-outlined"> bedtime </span>
+          </button>
+        </div>
+        <div id="sem-sb-wrap"></div>
+        <div id="ch-sb"></div>
+        <div class="nav">
+          <div class="nav-sec">Principal</div>
+          <button class="ni active" onclick="go('dash', this)">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <rect x="3" y="3" width="7" height="7" />
+              <rect x="14" y="3" width="7" height="7" />
+              <rect x="14" y="14" width="7" height="7" />
+              <rect x="3" y="14" width="7" height="7" /></svg
+            >Dashboard
+          </button>
+          <button class="ni" onclick="activarSesion()">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <polygon points="5,3 19,12 5,21" /></svg
+            >Modo sesión
+          </button>
+          <div class="nav-sec">Sesión</div>
+          <button class="ni" onclick="go('journal', this)">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+              <polyline points="14,2 14,8 20,8" /></svg
+            >Journal del día
+          </button>
+          <button class="ni" onclick="go('registrar', this)">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="16" />
+              <line x1="8" y1="12" x2="16" y2="12" /></svg
+            >Registrar trade
+          </button>
+          <button class="ni" onclick="go('calc', this)">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <rect x="4" y="2" width="16" height="20" rx="2" />
+              <line x1="8" y1="6" x2="16" y2="6" />
+              <line x1="8" y1="10" x2="16" y2="10" />
+              <line x1="8" y1="14" x2="12" y2="14" /></svg
+            >Calculadora lote
+          </button>
+          <div class="nav-sec">Análisis</div>
+          <button class="ni" onclick="go('historial', this)">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <line x1="8" y1="6" x2="21" y2="6" />
+              <line x1="8" y1="12" x2="21" y2="12" />
+              <line x1="8" y1="18" x2="21" y2="18" />
+              <line x1="3" y1="6" x2="3.01" y2="6" />
+              <line x1="3" y1="12" x2="3.01" y2="12" />
+              <line x1="3" y1="18" x2="3.01" y2="18" /></svg
+            >Historial trades
+          </button>
+          <button class="ni" onclick="go('journals', this)">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path d="M4 19.5A2.5 2.5 0 016.5 17H20" />
+              <path
+                d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"
+              /></svg
+            >Journals previos
+          </button>
+          <button class="ni" onclick="go('stats', this)">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <line x1="18" y1="20" x2="18" y2="10" />
+              <line x1="12" y1="20" x2="12" y2="4" />
+              <line x1="6" y1="20" x2="6" y2="14" /></svg
+            >Estadísticas
+          </button>
+          <button class="ni" onclick="go('reporte', this)">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+              <polyline points="14,2 14,8 20,8" />
+              <line x1="16" y1="13" x2="8" y2="13" />
+              <line x1="16" y1="17" x2="8" y2="17" />
+              <polyline points="10,9 9,9 8,9" /></svg
+            >Reporte semanal
+          </button>
+          <button class="ni" onclick="go('consistencia', this)">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <polyline points="22,12 18,12 15,21 9,3 6,12 2,12" /></svg
+            >Consistencia
+          </button>
+          <button class="ni" onclick="go('heatmap', this)">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <rect x="3" y="4" width="18" height="18" rx="2" />
+              <line x1="16" y1="2" x2="16" y2="6" />
+              <line x1="8" y1="2" x2="8" y2="6" />
+              <line x1="3" y1="10" x2="21" y2="10" /></svg
+            >Calendario
+          </button>
+          <button class="ni" onclick="go('correlacion', this)">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <circle cx="8" cy="16" r="2" />
+              <circle cx="16" cy="8" r="2" />
+              <circle cx="12" cy="12" r="2" />
+              <line x1="6" y1="14" x2="10" y2="18" />
+              <line x1="14" y1="6" x2="18" y2="10" /></svg
+            >Emoción vs resultado
+          </button>
+          <button class="ni" onclick="go('replay', this)">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <polygon points="5 3 19 12 5 21 5 3" /></svg
+            >Replay de cuenta
+          </button>
+
+          <div class="nav-sec">Modulos avanzados</div>
+          <button class="ni" onclick="go('challenge', this)">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path
+                d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+              /></svg
+            >Tracker challenge
+          </button>
+          <button class="ni" onclick="go('reglas', this)">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path d="M9 11l3 3L22 4" />
+              <path
+                d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"
+              /></svg
+            >Reglas (Rule Engine)
+          </button>
+          <button class="ni" onclick="go('simulador', this)">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3" />
+              <line x1="12" y1="17" x2="12.01" y2="17" /></svg
+            >Simulador decision
+          </button>
+          <button class="ni" onclick="go('comparar', this)">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <polyline points="22,12 18,12 15,21 9,3 6,12 2,12" /></svg
+            >Comparar semanas
+          </button>
+          <button class="ni" onclick="go('toptrades', this)">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <polygon
+                points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"
+              /></svg
+            >Mejores y peores
+          </button>
+          <button class="ni" onclick="go('plantillas', this)">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <rect x="3" y="3" width="7" height="7" />
+              <rect x="14" y="3" width="7" height="7" />
+              <rect x="14" y="14" width="7" height="7" />
+              <rect x="3" y="14" width="7" height="7" /></svg
+            >Plantillas de setup
+          </button>
+        </div>
+        <div class="sidebar-footer">
+          <div class="sidebar-footer-row">
+            <button id="open-settings-btn" class="ni" onclick="openSettings()">
+              <span class="material-symbols-outlined" style="font-size: 15px">
+                settings
+              </span>
+              Configuración
+            </button>
+            <div
+              class="sidebar-streak-compact"
+              id="sidebar-streak"
+              style="display: none"
+            >
+              <span class="material-symbols-outlined"
+                >local_fire_department</span
+              ><span id="sidebar-streak-n"></span>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      <main class="main">
+        <!-- MODO SESION OVERLAY -->
+        <div class="session-overlay" id="session-overlay">
+          <button
+            class="btn btn-sm"
+            style="position: absolute; top: 20px; right: 20px"
+            onclick="cerrarSesion()"
+          >
+            ✕ Cerrar modo sesión
+          </button>
+          <div style="width: 100%; max-width: 520px">
+            <div id="session-sem-card" style="margin-bottom: 20px"></div>
+            <div class="session-cl card">
+              <div
+                style="
+                  font-size: 12px;
+                  font-weight: 600;
+                  margin-bottom: 12px;
+                  color: var(--text2);
+                "
+              >
+                CHECKLIST PRE-TRADE — 7/7 para operar
+              </div>
+              <div id="session-cl-list"></div>
+              <div id="session-cl-res"></div>
+            </div>
+            <div class="card">
+              <div class="freno-disp" id="session-timer">5:00</div>
+              <div class="freno-prog">
+                <div class="freno-bar" id="session-bar"></div>
+              </div>
+              <button
+                class="freno-bigbtn"
+                id="session-freno-btn"
+                onclick="toggleSessionFreno()"
+              >
+                ▶ Iniciar Freno de 5 Minutos
+              </button>
+              <div id="session-freno-msg" style="margin-top: 10px"></div>
+            </div>
+            <div
+              style="
+                display: flex;
+                gap: 8px;
+                justify-content: center;
+                flex-wrap: wrap;
+              "
+            >
+              <div
+                style="
+                  padding: 10px 16px;
+                  background: var(--bg2);
+                  border: 1px solid var(--border);
+                  border-radius: var(--rs);
+                  font-size: 11px;
+                  color: var(--text3);
+                  font-family: var(--mono);
+                "
+              >
+                1 trade/día máximo
+              </div>
+              <div
+                style="
+                  padding: 10px 16px;
+                  background: var(--bg2);
+                  border: 1px solid var(--border);
+                  border-radius: var(--rs);
+                  font-size: 11px;
+                  color: var(--text3);
+                  font-family: var(--mono);
+                "
+              >
+                Riesgo: 1% ($50)
+              </div>
+              <div
+                style="
+                  padding: 10px 16px;
+                  background: var(--bg2);
+                  border: 1px solid var(--border);
+                  border-radius: var(--rs);
+                  font-size: 11px;
+                  color: var(--text3);
+                  font-family: var(--mono);
+                "
+              >
+                BE obligatorio en 1:1
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- DASHBOARD -->
+        <div class="page active" id="page-dash">
+          <div class="pt">Dashboard</div>
+          <div class="ps" id="dash-date"></div>
+          <div id="dash-sem"></div>
+          <div id="dash-alerts"></div>
+          <div id="dash-rule-alerts"></div>
+          <div class="g4" id="dash-metrics"></div>
+
+          <div class="g2 dash-row-main">
+            <div class="card">
+              <div class="ct">Curva de equity — RR acumulado</div>
+              <div class="chart-wrap dash-eq-wrap">
+                <canvas id="eq-chart" role="img" aria-label="Curva de equity"
+                  >Equity acumulada.</canvas
+                >
+              </div>
+            </div>
+            <div class="card">
+              <div class="ct">Calendario del mes</div>
+              <div class="dcal-dow-row">
+                <span>L</span><span>M</span><span>X</span><span>J</span
+                ><span>V</span><span>S</span><span>D</span>
+              </div>
+              <div class="dcal-grid" id="dash-calendar"></div>
+              <div class="dcal-summary" id="dash-heatmap-summary"></div>
+            </div>
+          </div>
+          <div class="g2">
+            <div class="card">
+              <div class="ct">Últimos 8 trades</div>
+              <div id="dash-recent"></div>
+            </div>
+            <div class="card">
+              <div class="ct">Journal de hoy</div>
+              <div id="dash-journal"></div>
+            </div>
+          </div>
+          <div class="g2">
+            <div class="card">
+              <div class="ct">Challenge activo</div>
+              <div id="dash-challenge"></div>
+            </div>
+            <div class="card">
+              <div class="ct">Distribución RR</div>
+              <div id="dash-rdist"></div>
+            </div>
+          </div>
+          <div class="g2">
+            <div class="card">
+              <div class="ct">Rendimiento por sesión</div>
+              <div id="dash-perf-ses"></div>
+            </div>
+            <div class="card">
+              <div class="ct">Rendimiento por estrategia</div>
+              <div id="dash-perf-tipo"></div>
+            </div>
+          </div>
+          <div class="g3" id="dash-kpis"></div>
+          <div class="g3">
+            <div class="card">
+              <div class="ct">Rentabilidad</div>
+              <div class="gauge-wrap">
+                <div class="chart-wrap gauge-canvas-wrap">
+                  <canvas
+                    id="gauge-rent"
+                    role="img"
+                    aria-label="Gauge de rentabilidad general"
+                  ></canvas>
+                </div>
+                <div class="gauge-center">
+                  <div class="gauge-center-label">Ganancia</div>
+                  <div class="gauge-center-value" id="gauge-rent-value">—</div>
+                </div>
+              </div>
+              <div class="gauge-footer">
+                <div class="gauge-footer-item" id="gauge-rent-wins"></div>
+                <div class="gauge-footer-item" id="gauge-rent-winrate"></div>
+                <div class="gauge-footer-item" id="gauge-rent-losses"></div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="ct">Análisis corto (Venta)</div>
+              <div class="gauge-wrap">
+                <div class="chart-wrap gauge-canvas-wrap">
+                  <canvas
+                    id="gauge-corto"
+                    role="img"
+                    aria-label="Gauge de trades de venta"
+                  ></canvas>
+                </div>
+                <div class="gauge-center">
+                  <div class="gauge-center-label">Ganancia</div>
+                  <div class="gauge-center-value" id="gauge-corto-value">—</div>
+                </div>
+              </div>
+              <div class="gauge-footer">
+                <div class="gauge-footer-item" id="gauge-corto-wins"></div>
+                <div class="gauge-footer-item" id="gauge-corto-winrate"></div>
+                <div class="gauge-footer-item" id="gauge-corto-losses"></div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="ct">Análisis largo (Compra)</div>
+              <div class="gauge-wrap">
+                <div class="chart-wrap gauge-canvas-wrap">
+                  <canvas
+                    id="gauge-largo"
+                    role="img"
+                    aria-label="Gauge de trades de compra"
+                  ></canvas>
+                </div>
+                <div class="gauge-center">
+                  <div class="gauge-center-label">Ganancia</div>
+                  <div class="gauge-center-value" id="gauge-largo-value">—</div>
+                </div>
+              </div>
+              <div class="gauge-footer">
+                <div class="gauge-footer-item" id="gauge-largo-wins"></div>
+                <div class="gauge-footer-item" id="gauge-largo-winrate"></div>
+                <div class="gauge-footer-item" id="gauge-largo-losses"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ═══ CALENDARIO ECONÓMICO (TradingView) ═══ -->
+          <div class="card econ-cal-card">
+            <div class="ct">Calendario económico</div>
+            <div class="econ-cal-wrap">
+              <div class="tradingview-widget-container">
+                <div class="tradingview-widget-container__widget"></div>
+                <script
+                  type="text/javascript"
+                  src="https://s3.tradingview.com/external-embedding/embed-widget-events.js"
+                  async
+                >
+                  {
+                  "isTransparent": true,
+                  "textColor": "#d1d4dc",
+                  "width": "100%",
+                  "height": "450",
+                  "locale": "es",
+                  "importanceFilter": "0,1",
+                  "countryFilter": "us,eu,gb,jp"
+                  }
+                </script>
+              </div>
+            </div>
+            <div class="econ-cal-credit">
+              Calendario económico provisto por
+              <a
+                href="https://www.tradingview.com/"
+                rel="nofollow"
+                target="_blank"
+                >TradingView</a
+              >
+            </div>
+          </div>
+        </div>
+
+        <!-- JOURNAL -->
+        <div class="page" id="page-journal">
+          <div class="pt">Journal del día</div>
+          <div class="ps" id="journal-date"></div>
+          <div class="jhead-row">
+            <div class="jhead-meta" id="journal-meta"></div>
+            <div class="jautosave" id="j-autosave"></div>
+          </div>
+          <div class="jprog-wrap">
+            <div class="jprog-track">
+              <div class="jprog-fill" id="jprog-fill" style="width: 0%"></div>
+            </div>
+            <div class="jprog-label" id="jprog-label">0 / 0</div>
+          </div>
+
+          <div class="card jcard" id="jcard-1" data-phase="1">
+            <div class="mn jphase-head" onclick="toggleJPhase(1)">
+              <div class="mn-left">
+                <div class="mn-n jn-1">1</div>
+                <div class="mn-t">
+                  Pre-sesión — antes de abrir la plataforma
+                </div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px">
+                <div class="jphase-check" id="jcheck-1">
+                  <span class="material-symbols-outlined">check</span>
+                </div>
+                <span class="material-symbols-outlined jphase-chevron"
+                  >expand_more</span
+                >
+              </div>
+            </div>
+            <div class="jphase-body">
+              <div class="fr3">
+                <div class="fg">
+                  <label>Sesgo del día</label
+                  ><select id="j-sesgo">
+                    <option value="">—</option>
+                    <option>Alcista</option>
+                    <option>Bajista</option>
+                    <option>Sin sesgo claro</option>
+                  </select>
+                </div>
+                <div class="fg">
+                  <label>Estado emocional (1–10)</label
+                  ><input
+                    type="number"
+                    id="j-estado"
+                    min="1"
+                    max="10"
+                    placeholder="7"
+                  />
+                </div>
+                <div class="fg">
+                  <label>Noticias alto impacto</label
+                  ><select id="j-not">
+                    <option value="">—</option>
+                    <option>Sí — anotadas</option>
+                    <option>No</option>
+                  </select>
+                </div>
+              </div>
+              <div class="fg jreflect">
+                <label
+                  ><span class="material-symbols-outlined">flag</span>Niveles
+                  clave marcados hoy</label
+                ><textarea
+                  id="j-niv"
+                  placeholder="EURUSD resistencia 1.0850 (4H), soporte 1.0780, liquidez en 1.0900..."
+                ></textarea>
+              </div>
+              <div class="fg jreflect">
+                <label
+                  ><span class="material-symbols-outlined">target</span>Setup
+                  que busco HOY</label
+                ><textarea
+                  id="j-setup"
+                  placeholder="Par, dirección, zona, tipo (continuación/reversión)..."
+                ></textarea>
+              </div>
+              <div class="fg jreflect">
+                <label
+                  ><span class="material-symbols-outlined">alt_route</span>Setup
+                  alternativo (plan B)</label
+                >
+                <textarea
+                  id="j-setup-alt"
+                  placeholder="Ej: Si EURUSD no confirma, vigilar GBPUSD en zona 1.2650 con mismas condiciones..."
+                ></textarea>
+              </div>
+            </div>
+          </div>
+
+          <div class="card jcard" id="jcard-2" data-phase="2">
+            <div class="mn jphase-head" onclick="toggleJPhase(2)">
+              <div class="mn-left">
+                <div class="mn-n jn-2">2</div>
+                <div class="mn-t">Pre-trade — checklist obligatorio (7/7)</div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px">
+                <div class="jphase-check" id="jcheck-2">
+                  <span class="material-symbols-outlined">check</span>
+                </div>
+                <span class="material-symbols-outlined jphase-chevron"
+                  >expand_more</span
+                >
+              </div>
+            </div>
+            <div class="jphase-body">
+              <div id="pre-cl"></div>
+              <div class="cl-segbar" id="cl-segbar"></div>
+              <div id="cl-res"></div>
+              <div class="divider"></div>
+              <div class="fg jreflect">
+                <label
+                  ><span class="material-symbols-outlined">checklist</span>¿Por
+                  qué VAS a entrar? (5 criterios)</label
+                ><textarea
+                  id="j-razon"
+                  placeholder="1. Mitigó zona 4H en...&#10;2. Alineado 4H + 15M...&#10;3. Tomó liquidez...&#10;4. POI decisional con imbalance...&#10;5. Zona Premium, vendedores en control..."
+                ></textarea>
+              </div>
+              <div class="fg">
+                <label>Invalidación del trade</label
+                ><input
+                  type="text"
+                  id="j-inv"
+                  placeholder="Si el precio rompe con cuerpo por encima de..."
+                />
+              </div>
+            </div>
+          </div>
+
+          <div class="card jcard" id="jcard-3" data-phase="3">
+            <div class="mn jphase-head" onclick="toggleJPhase(3)">
+              <div class="mn-left">
+                <div class="mn-n jn-3">3</div>
+                <div class="mn-t">Post-trade — inmediatamente después</div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px">
+                <div class="jphase-check" id="jcheck-3">
+                  <span class="material-symbols-outlined">check</span>
+                </div>
+                <span class="material-symbols-outlined jphase-chevron"
+                  >expand_more</span
+                >
+              </div>
+            </div>
+            <div class="jphase-body">
+              <div class="fr3">
+                <div class="fg">
+                  <label>Resultado</label
+                  ><select id="j-res">
+                    <option value="">—</option>
+                    <option>TP</option>
+                    <option>SL</option>
+                    <option>BE</option>
+                    <option>Sin trade hoy</option>
+                  </select>
+                </div>
+                <div class="fg">
+                  <label>¿Respetaste el plan?</label
+                  ><select id="j-plan" onchange="toggleFallo()">
+                    <option value="">—</option>
+                    <option>Sí</option>
+                    <option>No</option>
+                  </select>
+                </div>
+                <div class="fg">
+                  <label>Emoción durante el trade</label
+                  ><select id="j-emo">
+                    <option value="">—</option>
+                    <option>Calma</option>
+                    <option>FOMO</option>
+                    <option>Miedo</option>
+                    <option>Euforia</option>
+                    <option>Frustración</option>
+                    <option>Ansiedad</option>
+                  </select>
+                </div>
+              </div>
+              <div id="fallo-sec" style="display: none">
+                <div class="alert ae" style="margin-bottom: 8px">
+                  ⚠ Protocolo de fallo activado.
+                </div>
+                <div class="fg jreflect">
+                  <label
+                    ><span class="material-symbols-outlined">error</span>¿Qué
+                    regla exacta violaste?</label
+                  ><textarea
+                    id="j-fallo"
+                    placeholder="Regla #01 — tomé un segundo trade para recuperar..."
+                  ></textarea>
+                </div>
+                <div class="fr">
+                  <div class="fg">
+                    <label>Emoción que causó el fallo</label
+                    ><input
+                      type="text"
+                      id="j-emofallo"
+                      placeholder="FOMO, miedo, euforia..."
+                    />
+                  </div>
+                  <div class="fg">
+                    <label>Acción preventiva para mañana</label
+                    ><input
+                      type="text"
+                      id="j-prev"
+                      placeholder="Voy a aplicar el freno cuando sienta..."
+                    />
+                  </div>
+                </div>
+              </div>
+              <div class="fg">
+                <label>¿Apareció un setup emergente en otro par?</label>
+                <select
+                  id="j-emergente-par"
+                  class="instrument-select"
+                  data-empty-label="No apareció ninguno"
+                ></select>
+              </div>
+              <div id="j-emergente-box" style="display: none">
+                <div class="fg">
+                  <label>¿Lo tomaste?</label>
+                  <select id="j-emergente-accion" onchange="toggleEmergente()">
+                    <option value="">—</option>
+                    <option>Sí lo tomé</option>
+                    <option>No lo tomé — no estaba en el plan</option>
+                    <option>No lo tomé — no cumplía criterios</option>
+                  </select>
+                </div>
+                <div class="fg jreflect">
+                  <label
+                    ><span class="material-symbols-outlined">visibility</span
+                    >Describe el setup emergente</label
+                  >
+                  <textarea
+                    id="j-emergente-desc"
+                    placeholder="Qué viste, en qué zona, qué criterios cumplía o faltaban..."
+                  ></textarea>
+                </div>
+              </div>
+              <div class="fg jreflect">
+                <label
+                  ><span class="material-symbols-outlined">bolt</span>¿Qué pasó
+                  que no esperabas?</label
+                ><textarea
+                  id="j-sorp"
+                  placeholder="Describe lo que viste, no lo que querías ver..."
+                ></textarea>
+              </div>
+            </div>
+          </div>
+
+          <div class="card jcard" id="jcard-4" data-phase="4">
+            <div class="mn jphase-head" onclick="toggleJPhase(4)">
+              <div class="mn-left">
+                <div class="mn-n jn-4">4</div>
+                <div class="mn-t">Post-sesión — al cerrar la plataforma</div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px">
+                <div class="jphase-check" id="jcheck-4">
+                  <span class="material-symbols-outlined">check</span>
+                </div>
+                <span class="material-symbols-outlined jphase-chevron"
+                  >expand_more</span
+                >
+              </div>
+            </div>
+            <div class="jphase-body">
+              <div class="fg jreflect">
+                <label
+                  ><span class="material-symbols-outlined">search</span
+                  ><span id="j-op-label"
+                    >¿Perdí alguna oportunidad hoy? ¿Por qué?</span
+                  ></label
+                ><textarea
+                  id="j-op"
+                  placeholder="Sí / No — si sí, ¿qué pasó?"
+                ></textarea>
+              </div>
+              <div class="fg jreflect">
+                <label
+                  ><span class="material-symbols-outlined">lightbulb</span
+                  ><span id="j-apr-label"
+                    >¿Qué aprendí HOY — una sola cosa concreta?</span
+                  ></label
+                ><textarea
+                  id="j-apr"
+                  placeholder="Una cosa aplicable mañana..."
+                ></textarea>
+              </div>
+              <div class="fg jreflect">
+                <label
+                  ><span class="material-symbols-outlined">autorenew</span
+                  ><span id="j-dif-label"
+                    >¿Qué haría diferente? (acción concreta)</span
+                  ></label
+                ><textarea
+                  id="j-dif"
+                  placeholder="No 'ser más disciplinado'. ¿Qué acción específica?"
+                ></textarea>
+              </div>
+              <div class="fg" style="margin-bottom: 12px">
+                <label>Calificación del día (ejecución, no resultado)</label>
+                <div class="scrow" id="score-row"></div>
+              </div>
+              <button class="btn btn-p" onclick="saveJournal()">
+                Guardar journal del día
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- REGISTRAR TRADE -->
+        <div class="page" id="page-registrar">
+          <div class="pt">Registrar trade</div>
+          <div class="ps">
+            Completa inmediatamente después de cerrar el trade
+          </div>
+          <div id="registrar-alerts"></div>
+          <div class="card">
+            <div class="fr">
+              <div class="fg">
+                <label>Fecha</label><input type="date" id="t-fecha" />
+              </div>
+              <div class="fr">
+                <div class="fg">
+                  <label>Hora entrada</label><input type="time" id="t-hora" />
+                </div>
+                <div class="fg">
+                  <label>Hora cierre</label
+                  ><input type="time" id="t-hora-cierre" />
+                </div>
+              </div>
+            </div>
+            <div class="fr3">
+              <div class="fg">
+                <label>Par</label
+                ><select id="t-par" class="instrument-select"></select>
+              </div>
+              <div class="fg">
+                <label>Dirección</label
+                ><select id="t-dir">
+                  <option>Compra</option>
+                  <option>Venta</option>
+                </select>
+              </div>
+              <div class="fg">
+                <label>RR obtenido (+ TP · − SL · 0 BE)</label
+                ><input
+                  type="number"
+                  id="t-rr"
+                  placeholder="2.0 o -1.5"
+                  step="0.1"
+                  oninput="updateResPreview()"
+                />
+                <div id="t-res-preview" style="margin-top: 4px"></div>
+              </div>
+            </div>
+            <div class="fr">
+              <div class="fg">
+                <label>Tipo de setup</label
+                ><select id="t-tipo">
+                  <option>Fase de continuidad</option>
+                  <option>Fase de Pullback</option>
+                  <option>Fase de Rango</option>
+                  <option>Fase de Ruptura</option>
+                </select>
+              </div>
+              <div class="fg">
+                <label>Sesión</label
+                ><select id="t-ses">
+                  <option>NY</option>
+                  <option>Londres</option>
+                  <option>Asia</option>
+                </select>
+              </div>
+            </div>
+            <div class="fr">
+              <div class="fg">
+                <label>¿Respetaste el plan?</label
+                ><select id="t-plan">
+                  <option>Sí</option>
+                  <option>No</option>
+                </select>
+              </div>
+              <div class="fg">
+                <label>Emoción al entrar</label
+                ><select id="t-emo">
+                  <option>Calma</option>
+                  <option>FOMO</option>
+                  <option>Miedo</option>
+                  <option>Euforia</option>
+                  <option>Frustración</option>
+                </select>
+              </div>
+            </div>
+            <div class="fg">
+              <label style="text-transform: none; letter-spacing: normal"
+                >Precios (opcional — habilita "Eficiencia de captura": cuánto
+                del movimiento planeado realmente aprovechaste)</label
+              >
+            </div>
+            <div class="fr3">
+              <div class="fg">
+                <label>Precio de entrada</label
+                ><input
+                  type="number"
+                  id="t-precio-entrada"
+                  placeholder="1.1050"
+                  step="0.00001"
+                />
+              </div>
+              <div class="fg">
+                <label>Precio de TP planeado</label
+                ><input
+                  type="number"
+                  id="t-precio-tp"
+                  placeholder="1.1120"
+                  step="0.00001"
+                />
+              </div>
+              <div class="fg">
+                <label>Precio de salida real</label
+                ><input
+                  type="number"
+                  id="t-precio-salida"
+                  placeholder="1.1095"
+                  step="0.00001"
+                />
+              </div>
+            </div>
+            <div class="fg">
+              <label
+                >Screenshots de temporalidades (Ctrl+V para pegar desde
+                TradingView)</label
+              >
+              <div class="g2" style="gap: 10px; margin-bottom: 0">
+                <div>
+                  <div
+                    style="
+                      font-size: 10px;
+                      color: var(--text3);
+                      font-family: var(--mono);
+                      margin-bottom: 4px;
+                      text-transform: uppercase;
+                      letter-spacing: 0.5px;
+                    "
+                  >
+                    Temporalidad mayor (4H)
+                  </div>
+                  <div
+                    class="img-zone"
+                    id="zone-htf"
+                    onclick="document.getElementById('t-img-htf').click()"
+                    ondragover="dragOver(event, 'zone-htf')"
+                    ondragleave="dragLeave('zone-htf')"
+                    ondrop="dropImg(event, 't-img-htf-preview', 'zone-htf')"
+                  >
+                    <input
+                      type="file"
+                      id="t-img-htf"
+                      accept="image/*"
+                      onchange="
+                        previewZone(this, 't-img-htf-preview', 'zone-htf')
+                      "
+                    />
+                    <div class="img-zone-label" id="zone-htf-label">
+                      Click, arrastra, ⌘+V o Ctrl+V
+                    </div>
+                    <div class="img-zone-hint">4H · 1H · Diario</div>
+                    <img
+                      id="t-img-htf-preview"
+                      class="img-zone-preview"
+                      alt="HTF"
+                    />
+                    <button
+                      class="img-remove"
+                      onclick="
+                        clearZone(
+                          event,
+                          't-img-htf-preview',
+                          'zone-htf',
+                          't-img-htf',
+                          'zone-htf-label',
+                        )
+                      "
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <div
+                    style="
+                      font-size: 10px;
+                      color: var(--text3);
+                      font-family: var(--mono);
+                      margin-bottom: 4px;
+                      text-transform: uppercase;
+                      letter-spacing: 0.5px;
+                    "
+                  >
+                    Temporalidad menor (15M)
+                  </div>
+                  <div
+                    class="img-zone"
+                    id="zone-ltf"
+                    onclick="document.getElementById('t-img-ltf').click()"
+                    ondragover="dragOver(event, 'zone-ltf')"
+                    ondragleave="dragLeave('zone-ltf')"
+                    ondrop="dropImg(event, 't-img-ltf-preview', 'zone-ltf')"
+                  >
+                    <input
+                      type="file"
+                      id="t-img-ltf"
+                      accept="image/*"
+                      onchange="
+                        previewZone(this, 't-img-ltf-preview', 'zone-ltf')
+                      "
+                    />
+                    <div class="img-zone-label" id="zone-ltf-label">
+                      Click, arrastra, ⌘+V o Ctrl+V
+                    </div>
+                    <div class="img-zone-hint">15M · 5M · 1M</div>
+                    <img
+                      id="t-img-ltf-preview"
+                      class="img-zone-preview"
+                      alt="LTF"
+                    />
+                    <button
+                      class="img-remove"
+                      onclick="
+                        clearZone(
+                          event,
+                          't-img-ltf-preview',
+                          'zone-ltf',
+                          't-img-ltf',
+                          'zone-ltf-label',
+                        )
+                      "
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="fg">
+              <label>Notas</label
+              ><textarea
+                id="t-notas"
+                placeholder="Setup, contexto, qué viste, qué pasó..."
+              ></textarea>
+            </div>
+            <button class="btn btn-p" onclick="saveTrade()">
+              Registrar trade
+            </button>
+          </div>
+        </div>
+
+        <!-- CALCULADORA -->
+        <div class="page" id="page-calc">
+          <div class="pt">Calculadora de tamaño de lote</div>
+          <div class="ps">
+            Calcula el lote exacto para no arriesgar más del 1% ($50)
+          </div>
+          <div class="g2">
+            <div class="card">
+              <div class="ct">Parámetros</div>
+              <div class="fg">
+                <label>Par</label>
+                <select
+                  id="c-par"
+                  class="instrument-select"
+                  onchange="calcLote()"
+                ></select>
+              </div>
+              <div class="fg">
+                <label>Tamaño de cuenta (USD)</label
+                ><input
+                  type="number"
+                  id="c-cuenta"
+                  value="5000"
+                  onchange="calcLote()"
+                  oninput="calcLote()"
+                />
+              </div>
+              <div class="fg">
+                <label>Riesgo por trade (%)</label
+                ><input
+                  type="number"
+                  id="c-riesgo"
+                  value="1"
+                  step="0.1"
+                  min="0.1"
+                  max="5"
+                  onchange="calcLote()"
+                  oninput="calcLote()"
+                />
+              </div>
+              <div class="fg">
+                <label id="c-sl-label">Stop Loss (pips)</label
+                ><input
+                  type="number"
+                  id="c-sl"
+                  placeholder="Ej: 15"
+                  onchange="calcLote()"
+                  oninput="calcLote()"
+                />
+              </div>
+              <div class="fg">
+                <label>Precio de entrada (opcional)</label
+                ><input
+                  type="number"
+                  id="c-entry"
+                  placeholder="Ej: 1.08450"
+                  step="0.00001"
+                  onchange="calcLote()"
+                  oninput="calcLote()"
+                />
+              </div>
+              <div class="fg">
+                <label>Precio de Stop Loss (opcional)</label
+                ><input
+                  type="number"
+                  id="c-slprice"
+                  placeholder="Ej: 1.08300"
+                  step="0.00001"
+                  onchange="calcSlFromPrices()"
+                  oninput="calcSlFromPrices()"
+                />
+              </div>
+            </div>
+            <div>
+              <div id="calc-result-box">
+                <div class="card" style="text-align: center; padding: 30px">
+                  <div
+                    style="
+                      font-size: 12px;
+                      color: var(--text3);
+                      margin-bottom: 8px;
+                    "
+                  >
+                    Ingresa los parámetros para calcular
+                  </div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="ct">Tabla rápida de referencia</div>
+                <div id="calc-tabla"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- HISTORIAL -->
+        <div class="page" id="page-historial">
+          <div class="pt">Historial de trades</div>
+          <div class="ps">Todos tus trades registrados</div>
+          <div class="card">
+            <div class="fr3">
+              <div class="fg">
+                <label>Par</label
+                ><select
+                  id="f-par"
+                  class="instrument-select"
+                  data-empty-label="Todos"
+                  onchange="renderHistorial()"
+                ></select>
+              </div>
+              <div class="fg">
+                <label>Resultado</label
+                ><select id="f-res" onchange="renderHistorial()">
+                  <option value="">Todos</option>
+                  <option>TP</option>
+                  <option>SL</option>
+                  <option>BE</option>
+                </select>
+              </div>
+              <div class="fg">
+                <label>Plan</label
+                ><select id="f-plan" onchange="renderHistorial()">
+                  <option value="">Todos</option>
+                  <option>Sí</option>
+                  <option>No</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div id="hist-list"></div>
+        </div>
+
+        <!-- JOURNALS -->
+        <div class="page" id="page-journals">
+          <div class="pt">Journals anteriores</div>
+          <div class="ps">Historial completo de anotaciones</div>
+          <div id="journals-list"></div>
+        </div>
+
+        <!-- ESTADÍSTICAS -->
+        <div class="page" id="page-stats">
+          <div class="pt">Estadísticas</div>
+          <div class="ps">Análisis completo de rendimiento</div>
+          <div class="g3" style="margin-bottom: 12px">
+            <div class="card">
+              <div class="ct">Win rate</div>
+              <div
+                id="st-wr"
+                style="
+                  font-size: 26px;
+                  font-weight: 600;
+                  font-family: var(--mono);
+                "
+              ></div>
+              <div
+                id="st-wrsub"
+                style="font-size: 10px; color: var(--text3); margin-top: 3px"
+              ></div>
+            </div>
+            <div class="card">
+              <div class="ct">RR promedio (TP)</div>
+              <div
+                id="st-rr"
+                style="
+                  font-size: 26px;
+                  font-weight: 600;
+                  font-family: var(--mono);
+                "
+              ></div>
+            </div>
+            <div class="card">
+              <div class="ct">Plan respetado</div>
+              <div
+                id="st-pl"
+                style="
+                  font-size: 26px;
+                  font-weight: 600;
+                  font-family: var(--mono);
+                "
+              ></div>
+            </div>
+          </div>
+          <div class="g2">
+            <div class="card">
+              <div class="ct">Win rate por día de semana</div>
+              <div class="chart-wrap" style="height: 150px">
+                <canvas id="ch-dia" role="img" aria-label="Win rate por día"
+                  >Datos.</canvas
+                >
+              </div>
+            </div>
+            <div class="card">
+              <div class="ct">Win rate por hora de entrada</div>
+              <div class="chart-wrap" style="height: 150px">
+                <canvas id="ch-hora" role="img" aria-label="Win rate por hora"
+                  >Datos.</canvas
+                >
+              </div>
+            </div>
+          </div>
+          <div class="g2" style="margin-top: 12px">
+            <div class="card">
+              <div class="ct">Con plan vs sin plan</div>
+              <div id="st-plan-d"></div>
+            </div>
+            <div class="card">
+              <div class="ct">Win rate por emoción</div>
+              <div id="st-emo-d"></div>
+            </div>
+          </div>
+          <div class="g3" style="margin-top: 12px">
+            <div class="card">
+              <div class="ct">Por par</div>
+              <div id="st-par-d"></div>
+            </div>
+            <div class="card">
+              <div class="ct">Por tipo de setup</div>
+              <div id="st-tipo-d"></div>
+            </div>
+            <div class="card">
+              <div class="ct">Por sesión</div>
+              <div id="st-ses-d"></div>
+            </div>
+          </div>
+          <div class="card" style="margin-top: 12px">
+            <div class="ct">Racha y alertas</div>
+            <div id="st-racha"></div>
+          </div>
+          <div class="card" style="margin-top: 12px">
+            <div class="ct">Curva de equity completa</div>
+            <div class="chart-wrap" style="height: 200px">
+              <canvas id="ch-eq2" role="img" aria-label="Equity completa"
+                >Equity.</canvas
+              >
+            </div>
+          </div>
+
+          <!-- ═══ MÉTRICAS AVANZADAS (Fase 3 — Entrega 6) ═══ -->
+          <div
+            class="ct"
+            style="margin-top: 20px; margin-bottom: 4px; font-size: 12px"
+          >
+            Métricas avanzadas
+          </div>
+          <div class="g4">
+            <div class="metric">
+              <div class="mv" id="adv-pf"></div>
+              <div class="ml">Profit Factor</div>
+            </div>
+            <div class="metric">
+              <div class="mv" id="adv-exp"></div>
+              <div class="ml">Expectancy (R)</div>
+            </div>
+            <div class="metric">
+              <div class="mv" id="adv-rf"></div>
+              <div class="ml">Recovery Factor</div>
+            </div>
+            <div class="metric">
+              <div class="mv" id="adv-dd"></div>
+              <div class="ml">Max drawdown (R)</div>
+            </div>
+          </div>
+          <div class="g4">
+            <div class="metric">
+              <div class="mv" id="adv-avgwin"></div>
+              <div class="ml">Average Winner (R)</div>
+            </div>
+            <div class="metric">
+              <div class="mv" id="adv-avgloss"></div>
+              <div class="ml">Average Loser (R)</div>
+            </div>
+            <div class="metric">
+              <div class="mv" id="adv-bigwin"></div>
+              <div class="ml">Largest Win (R)</div>
+            </div>
+            <div class="metric">
+              <div class="mv" id="adv-bigloss"></div>
+              <div class="ml">Largest Loss (R)</div>
+            </div>
+          </div>
+          <div class="g4">
+            <div class="metric" style="grid-column: 1 / -1">
+              <div class="mv" id="adv-efficiency"></div>
+              <div class="ml" id="adv-efficiency-sub">
+                Eficiencia de captura promedio
+              </div>
+            </div>
+          </div>
+          <div class="g2" style="margin-top: 12px">
+            <div class="card">
+              <div class="ct">Distribución de RR (R Distribution)</div>
+              <div id="adv-rdist"></div>
+            </div>
+            <div class="card">
+              <div class="ct">Distribución de riesgo usado</div>
+              <div id="adv-riskdist"></div>
+            </div>
+          </div>
+
+          <!-- ═══ DISTRIBUCIÓN DE GANANCIAS / PÉRDIDAS (Fase 3 — Entrega 10) ═══ -->
+          <div class="g2" style="margin-top: 12px">
+            <div class="card">
+              <div class="ct">Distribución de ganancias (R)</div>
+              <div class="chart-wrap" style="height: 140px">
+                <canvas
+                  id="ch-wins-dist"
+                  role="img"
+                  aria-label="Distribución de ganancias"
+                  >Ganancias.</canvas
+                >
+              </div>
+            </div>
+            <div class="card">
+              <div class="ct">Distribución de pérdidas (R)</div>
+              <div class="chart-wrap" style="height: 140px">
+                <canvas
+                  id="ch-losses-dist"
+                  role="img"
+                  aria-label="Distribución de pérdidas"
+                  >Pérdidas.</canvas
+                >
+              </div>
+            </div>
+          </div>
+
+          <!-- ═══ RENDIMIENTO MENSUAL (Fase 3 — Entrega 7) ═══ -->
+          <div class="card" style="margin-top: 12px">
+            <div class="ct">Rendimiento mensual</div>
+            <div class="chart-wrap" style="height: 160px">
+              <canvas id="ch-mes" role="img" aria-label="Win rate por mes"
+                >Datos.</canvas
+              >
+            </div>
+            <div id="st-mes-tabla" style="margin-top: 10px"></div>
+          </div>
+        </div>
+
+        <!-- REPORTE SEMANAL -->
+        <div class="page" id="page-reporte">
+          <div class="pt">Reporte semanal</div>
+          <div class="ps">
+            Resumen automático por semana — revísalo cada domingo
+          </div>
+          <div id="reporte-content"></div>
+        </div>
+
+        <!-- CONSISTENCIA -->
+        <div class="page" id="page-consistencia">
+          <div class="pt">Score de consistencia</div>
+          <div class="ps">Mide tu disciplina — no tus resultados</div>
+          <div class="g2">
+            <div class="card" style="text-align: center">
+              <div class="ct">Score esta semana</div>
+              <div class="cons-score" id="cons-score">—</div>
+              <div
+                style="font-size: 12px; color: var(--text3); margin-top: 4px"
+                id="cons-grade"
+              ></div>
+            </div>
+            <div class="card">
+              <div class="ct">Desglose</div>
+              <div class="cons-detail" id="cons-detail"></div>
+            </div>
+          </div>
+          <div class="card" style="margin-top: 12px">
+            <div class="ct">Evolución semanal del score</div>
+            <div class="chart-wrap" style="height: 160px">
+              <canvas id="ch-cons" role="img" aria-label="Score de consistencia"
+                >Consistencia.</canvas
+              >
+            </div>
+          </div>
+          <div class="card" style="margin-top: 12px">
+            <div class="ct">¿Cómo se calcula?</div>
+            <div style="display: flex; flex-direction: column; gap: 6px">
+              <div class="srow">
+                <span class="slbl">Journal completado</span
+                ><span
+                  style="
+                    font-size: 11px;
+                    color: var(--text2);
+                    font-family: var(--mono);
+                  "
+                  >+20 pts por día operativo</span
+                >
+              </div>
+              <div class="srow">
+                <span class="slbl">Plan respetado</span
+                ><span
+                  style="
+                    font-size: 11px;
+                    color: var(--text2);
+                    font-family: var(--mono);
+                  "
+                  >+20 pts por trade</span
+                >
+              </div>
+              <div class="srow">
+                <span class="slbl">Freno completado</span
+                ><span
+                  style="
+                    font-size: 11px;
+                    color: var(--text2);
+                    font-family: var(--mono);
+                  "
+                  >+15 pts cuando se registra</span
+                >
+              </div>
+              <div class="srow">
+                <span class="slbl">Un solo trade/día</span
+                ><span
+                  style="
+                    font-size: 11px;
+                    color: var(--text2);
+                    font-family: var(--mono);
+                  "
+                  >+15 pts por día</span
+                >
+              </div>
+              <div class="srow">
+                <span class="slbl">Calificación diaria ≥7</span
+                ><span
+                  style="
+                    font-size: 11px;
+                    color: var(--text2);
+                    font-family: var(--mono);
+                  "
+                  >+10 pts</span
+                >
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- MAPA DE CALOR -->
+        <div class="page" id="page-heatmap">
+          <div class="pt">Calendario</div>
+          <div class="ps">Resumen diario de tu rendimiento, mes a mes</div>
+          <div id="heatmap-rule-alerts"></div>
+          <div class="cal-layout">
+            <div class="card">
+              <div class="cal-toolbar">
+                <div class="cal-nav">
+                  <button
+                    class="btn btn-sm"
+                    onclick="prevMonth()"
+                    aria-label="Mes anterior"
+                  >
+                    &#8249;
+                  </button>
+                  <div class="cal-nav-title" id="cal-header-title"></div>
+                  <button
+                    class="btn btn-sm"
+                    onclick="nextMonth()"
+                    aria-label="Mes siguiente"
+                  >
+                    &#8250;
+                  </button>
+                  <button class="btn btn-sm" onclick="goToday()">Hoy</button>
+                </div>
+                <div class="cal-summary" id="cal-summary"></div>
+              </div>
+              <div class="cal-grid" id="cal-grid"></div>
+            </div>
+            <div class="card">
+              <div class="ct">Resumen semanal</div>
+              <div id="cal-weekly-summary"></div>
+            </div>
+          </div>
+          <div class="card" id="heatmap-detail-card" style="margin-top: 10px">
+            <div class="ct">Detalle del día</div>
+            <div id="heatmap-day-detail">
+              <div class="empty" style="padding: 20px; font-size: 11px">
+                Haz clic en un día del calendario para ver su detalle
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CORRELACION -->
+        <div class="page" id="page-correlacion">
+          <div class="pt">Emoción vs resultado</div>
+          <div class="ps">
+            Correlación entre tu estado emocional pre-sesión y el resultado del
+            trade
+          </div>
+          <div class="g2">
+            <div class="card">
+              <div class="ct">Matriz de correlación</div>
+              <div
+                style="
+                  font-size: 10px;
+                  color: var(--text3);
+                  font-family: var(--mono);
+                  margin-bottom: 8px;
+                "
+              >
+                Estado emocional (1–10) vs resultado
+              </div>
+              <div
+                style="
+                  display: flex;
+                  justify-content: space-between;
+                  margin-bottom: 4px;
+                "
+              >
+                <span
+                  style="
+                    font-size: 9px;
+                    color: var(--text3);
+                    font-family: var(--mono);
+                  "
+                  >Estado →</span
+                >
+                <div
+                  style="
+                    display: grid;
+                    grid-template-columns: repeat(10, 1fr);
+                    gap: 2px;
+                    flex: 1;
+                    margin-left: 8px;
+                  "
+                >
+                  <span class="corr-axis" style="text-align: center">1</span
+                  ><span class="corr-axis" style="text-align: center">2</span
+                  ><span class="corr-axis" style="text-align: center">3</span
+                  ><span class="corr-axis" style="text-align: center">4</span
+                  ><span class="corr-axis" style="text-align: center">5</span
+                  ><span class="corr-axis" style="text-align: center">6</span
+                  ><span class="corr-axis" style="text-align: center">7</span
+                  ><span class="corr-axis" style="text-align: center">8</span
+                  ><span class="corr-axis" style="text-align: center">9</span
+                  ><span class="corr-axis" style="text-align: center">10</span>
+                </div>
+              </div>
+              <div id="corr-matrix"></div>
+            </div>
+            <div>
+              <div class="card">
+                <div class="ct">Win rate por nivel emocional</div>
+                <div class="chart-wrap" style="height: 160px">
+                  <canvas
+                    id="ch-corr"
+                    role="img"
+                    aria-label="Win rate por estado emocional"
+                    >Correlación.</canvas
+                  >
+                </div>
+              </div>
+              <div class="card">
+                <div class="ct">Insights</div>
+                <div id="corr-insights"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══ REPLAY DE CUENTA (Fase 3 — Entrega 8) ═══ -->
+        <div class="page" id="page-replay">
+          <div class="pt">Replay de cuenta</div>
+          <div class="ps">
+            Reproduce la evolución de un Challenge trade a trade
+          </div>
+          <div class="card">
+            <div class="fg">
+              <label>Challenge a reproducir</label>
+              <select
+                id="replay-challenge"
+                onchange="changeReplayChallenge()"
+              ></select>
+            </div>
+          </div>
+          <div id="replay-empty"></div>
+          <div id="replay-body" style="display: none">
+            <div class="card">
+              <div class="chart-wrap" style="height: 180px">
+                <canvas id="ch-replay" role="img" aria-label="Equity del replay"
+                  >Equity.</canvas
+                >
+              </div>
+              <div
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 10px;
+                  margin-top: 10px;
+                "
+              >
+                <button
+                  class="btn btn-p btn-sm"
+                  id="replay-play-btn"
+                  onclick="toggleReplayPlay()"
+                >
+                  ▶ Reproducir
+                </button>
+                <input
+                  type="range"
+                  id="replay-slider"
+                  min="0"
+                  max="0"
+                  value="0"
+                  style="flex: 1"
+                  oninput="scrubReplay(this.value)"
+                />
+                <span
+                  id="replay-pos"
+                  style="
+                    font-size: 11px;
+                    font-family: var(--mono);
+                    color: var(--text3);
+                    min-width: 70px;
+                    text-align: right;
+                  "
+                ></span>
+              </div>
+            </div>
+            <div class="g3">
+              <div class="metric">
+                <div class="mv" id="replay-balance"></div>
+                <div class="ml">Balance en este punto</div>
+              </div>
+              <div class="metric">
+                <div class="mv" id="replay-netrr"></div>
+                <div class="ml">RR neto acumulado</div>
+              </div>
+              <div class="metric">
+                <div class="mv" id="replay-dd"></div>
+                <div class="ml">Drawdown acumulado</div>
+              </div>
+            </div>
+            <div class="card" style="margin-top: 12px">
+              <div class="ct">Este trade</div>
+              <div id="replay-trade-detail"></div>
+            </div>
+            <div class="card" style="margin-top: 12px">
+              <div class="ct">Estadísticas hasta este punto</div>
+              <div id="replay-stats-detail"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================= MODULOS AVANZADOS (v3) ================= -->
+
+        <div class="page" id="page-challenge">
+          <div class="pt">Tracker de challenges</div>
+          <div class="ps">
+            Multiples challenges, diferentes tamanos y firmas
+          </div>
+          <div id="challenge-rule-alerts"></div>
+          <button
+            class="btn btn-p"
+            style="margin-bottom: 14px"
+            onclick="openNewChallenge()"
+          >
+            + Nuevo challenge
+          </button>
+
+          <!-- ═══ BALANCE / DRAWDOWN CURVE del challenge activo (Fase 3 — Entrega 10) ═══ -->
+          <div id="ch-curves-empty"></div>
+          <div id="ch-curves-body" style="display: none">
+            <div class="g2" style="margin-bottom: 12px">
+              <div class="card">
+                <div class="ct">
+                  Balance Curve — <span id="ch-curves-name"></span>
+                </div>
+                <div class="chart-wrap" style="height: 150px">
+                  <canvas id="ch-balance" role="img" aria-label="Balance"
+                    >Balance.</canvas
+                  >
+                </div>
+              </div>
+              <div class="card">
+                <div class="ct">
+                  Drawdown Curve — <span id="ch-curves-name2"></span>
+                </div>
+                <div class="chart-wrap" style="height: 150px">
+                  <canvas id="ch-drawdown" role="img" aria-label="Drawdown"
+                    >Drawdown.</canvas
+                  >
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div id="challenge-list"></div>
+        </div>
+
+        <!-- ═══ REGLAS / RULE ENGINE (Fase 4 — Entrega 12) ═══ -->
+        <div class="page" id="page-reglas">
+          <div class="pt">Reglas (Rule Engine)</div>
+          <div class="ps">
+            Conjuntos de reglas reutilizables — estructura genérica, sin firmas
+            precargadas. Úsalos al crear un Challenge para prellenar sus
+            límites.
+          </div>
+          <button
+            class="btn btn-p"
+            style="margin-bottom: 14px"
+            onclick="openNewRuleSet()"
+          >
+            + Nuevo conjunto de reglas
+          </button>
+          <div id="ruleset-list"></div>
+        </div>
+
+        <div class="page" id="page-simulador">
+          <div class="pt">Simulador de decision pre-trade</div>
+          <div class="ps">Vale la pena entrar? Basado en tu historial real</div>
+          <div class="g2">
+            <div class="card">
+              <div class="ct">Parametros del trade</div>
+              <div class="fr">
+                <div class="fg">
+                  <label>Par</label
+                  ><select id="sim-par" class="instrument-select"></select>
+                </div>
+                <div class="fg">
+                  <label>Direccion</label
+                  ><select id="sim-dir">
+                    <option>Compra</option>
+                    <option>Venta</option>
+                  </select>
+                </div>
+              </div>
+              <div class="fr">
+                <div class="fg">
+                  <label>Tipo de setup</label
+                  ><select id="sim-tipo">
+                    <option>Fase de continuidad</option>
+                    <option>Fase de Pullback</option>
+                    <option>Fase de Rango</option>
+                    <option>Fase de Ruptura</option>
+                  </select>
+                </div>
+                <div class="fg">
+                  <label>Sesion</label
+                  ><select id="sim-ses">
+                    <option>NY</option>
+                    <option>Londres</option>
+                    <option>Asia</option>
+                  </select>
+                </div>
+              </div>
+              <div class="fr">
+                <div class="fg">
+                  <label>Estado emocional (1-10)</label
+                  ><input
+                    type="number"
+                    id="sim-estado"
+                    min="1"
+                    max="10"
+                    placeholder="7"
+                  />
+                </div>
+                <div class="fg">
+                  <label>RR objetivo</label
+                  ><input
+                    type="number"
+                    id="sim-rr"
+                    placeholder="2.0"
+                    step="0.1"
+                  />
+                </div>
+              </div>
+              <div class="fg">
+                <label>Dia de la semana</label>
+                <select id="sim-dia">
+                  <option value="0">Lunes</option>
+                  <option value="1">Martes</option>
+                  <option value="2">Miercoles</option>
+                  <option value="3">Jueves</option>
+                  <option value="4">Viernes</option>
+                </select>
+              </div>
+              <button
+                class="btn btn-p"
+                style="width: 100%; margin-top: 4px"
+                onclick="simular()"
+              >
+                Analizar este trade
+              </button>
+            </div>
+            <div id="sim-result">
+              <div class="card" style="text-align: center; padding: 32px">
+                <div style="font-size: 32px; margin-bottom: 8px">&#129300;</div>
+                <div style="font-size: 12px; color: var(--text3)">
+                  Ingresa los parametros y pulsa Analizar
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="ct">Historial de simulaciones de hoy</div>
+            <div id="sim-hist">
+              <div style="font-size: 11px; color: var(--text3)">
+                Las simulaciones apareceran aqui.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="page" id="page-comparar">
+          <div class="pt">Comparar semanas</div>
+          <div class="ps">Evolucion de tus metricas semana a semana</div>
+          <div class="card">
+            <div class="ct">Win rate — ultimas 8 semanas</div>
+            <div class="chart-wrap" style="height: 160px">
+              <canvas id="ch-wk-wr" role="img" aria-label="WR semanal"
+                >.</canvas
+              >
+            </div>
+          </div>
+          <div class="g2">
+            <div class="card">
+              <div class="ct">RR neto por semana</div>
+              <div class="chart-wrap" style="height: 140px">
+                <canvas id="ch-wk-rr" role="img" aria-label="RR neto">.</canvas>
+              </div>
+            </div>
+            <div class="card">
+              <div class="ct">Plan respetado por semana</div>
+              <div class="chart-wrap" style="height: 140px">
+                <canvas id="ch-wk-plan" role="img" aria-label="Plan semanal"
+                  >.</canvas
+                >
+              </div>
+            </div>
+          </div>
+          <div class="card" style="margin-top: 11px">
+            <div class="ct">Tabla comparativa detallada</div>
+            <div id="wk-tabla"></div>
+          </div>
+        </div>
+
+        <div class="page" id="page-toptrades">
+          <div class="pt">Mejores y peores trades</div>
+          <div class="ps">
+            Detecta patrones en tus trades mas significativos
+          </div>
+          <div class="g2">
+            <div class="card">
+              <div class="ct" style="color: var(--green)">
+                Top 5 ganadores (mayor RR)
+              </div>
+              <div id="top-wins"></div>
+            </div>
+            <div class="card">
+              <div class="ct" style="color: var(--red)">Ultimas 5 perdidas</div>
+              <div id="top-losses"></div>
+            </div>
+          </div>
+          <div class="card" style="margin-top: 11px">
+            <div class="ct">Patrones detectados automaticamente</div>
+            <div id="patterns"></div>
+          </div>
+        </div>
+
+        <div class="page" id="page-plantillas">
+          <div class="pt">Plantillas de setup</div>
+          <div class="ps">Guarda tus setups favoritos para registro rapido</div>
+          <button
+            class="btn btn-p"
+            style="margin-bottom: 12px"
+            onclick="openModal('modal-tpl')"
+          >
+            + Nueva plantilla
+          </button>
+          <div id="plantillas-list"></div>
+        </div>
+      </main>
+    </div>
+    <script type="module" src="js/main.js"></script>
+  </body>
+</html>

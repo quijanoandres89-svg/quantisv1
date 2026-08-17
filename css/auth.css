@@ -1,0 +1,64 @@
+#quantis-auth-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.quantis-auth-box {
+  width: 320px;
+  max-width: 90vw;
+  padding: 28px;
+  border-radius: 12px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  text-align: center;
+  font-family: "Syne", sans-serif;
+}
+
+.quantis-auth-box h2 {
+  margin: 0 0 4px;
+  letter-spacing: 1px;
+  color: var(--text);
+}
+
+.quantis-auth-sub {
+  color: var(--text2);
+  margin-bottom: 16px;
+  font-size: 13px;
+}
+
+#quantis-auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+#quantis-auth-form input {
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border2);
+  background: var(--bg3);
+  color: var(--text);
+  font-family: "DM Mono", monospace;
+}
+
+#quantis-auth-form button {
+  margin-top: 6px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: none;
+  background: var(--bg4);
+  color: var(--text);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.quantis-auth-error {
+  color: #ff6b6b;
+  font-size: 13px;
+  margin: 0;
+}
