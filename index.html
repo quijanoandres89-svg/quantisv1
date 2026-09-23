@@ -633,7 +633,6 @@
               ><span id="sidebar-streak-n"></span>
             </div>
           </div>
-          <div class="sidebar-session" id="sidebar-session"></div>
         </div>
       </nav>
 
@@ -857,23 +856,11 @@
           <div class="card econ-cal-card">
             <div class="ct">Calendario económico</div>
             <div class="econ-cal-wrap">
-              <div class="tradingview-widget-container">
+              <div
+                class="tradingview-widget-container"
+                id="econ-cal-widget-container"
+              >
                 <div class="tradingview-widget-container__widget"></div>
-                <script
-                  type="text/javascript"
-                  src="https://s3.tradingview.com/external-embedding/embed-widget-events.js"
-                  async
-                >
-                  {
-                  "isTransparent": true,
-                  "textColor": "#d1d4dc",
-                  "width": "100%",
-                  "height": "450",
-                  "locale": "es",
-                  "importanceFilter": "0,1",
-                  "countryFilter": "us,eu,gb,jp"
-                  }
-                </script>
               </div>
             </div>
             <div class="econ-cal-credit">
