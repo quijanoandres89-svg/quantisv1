@@ -33,6 +33,12 @@ import { renderChallengeAlerts } from "./alertSystem.js";
 import { calcChProgress } from "./challengeManager.js";
 import { buildGrid, tradeMapByDate, summarize } from "./calendarPro.js";
 
+// Con menos operaciones decisivas que esto, un WR bajo puede ser
+// puro ruido estadístico (ej. 1 de 3 = 33%) — no es motivo válido
+// para el bloqueo rojo. Por debajo de este mínimo, el WR bajo cae
+// como mucho en amarillo (precaución), nunca en rojo.
+const MIN_DECISIVOS_PARA_WR_ROJO = 8;
+
 /** Semáforo de disciplina: puede/no puede operar según el historial reciente. */
 export function getSem() {
   if (trades.length < 3)
@@ -53,17 +59,23 @@ export function getSem() {
     .filter((t) => t.res === "TP" && t.rr)
     .map((t) => parseFloat(t.rr));
   const rr = rrA.length ? rrA.reduce((a, b) => a + b, 0) / rrA.length : 0;
-  if (consec || wr < 0.35)
+  const wrBajoConfiable = decisivos >= MIN_DECISIVOS_PARA_WR_ROJO && wr < 0.35;
+  if (consec || wrBajoConfiable)
     return {
       l: "r",
       title: "No puedes operar",
-      sub: `3 pérdidas seguidas o WR <35%. Cierra la plataforma.`,
+      sub: consec
+        ? "3 pérdidas seguidas. Cierra la plataforma."
+        : `WR <35% en ${decisivos} operaciones. Cierra la plataforma.`,
     };
   if (wr < 0.5 || rr < 1.5)
     return {
       l: "y",
       title: "Ten precaución",
-      sub: `WR ${Math.round(wr * 100)}% o RR ${rr.toFixed(1)}. Solo setups A+.`,
+      sub:
+        decisivos < MIN_DECISIVOS_PARA_WR_ROJO
+          ? `Muestra pequeña (${decisivos} decisivas) — WR ${Math.round(wr * 100)}% aún no es concluyente. Solo setups A+.`
+          : `WR ${Math.round(wr * 100)}% o RR ${rr.toFixed(1)}. Solo setups A+.`,
     };
   return {
     l: "g",
