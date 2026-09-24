@@ -467,6 +467,18 @@
               /></svg
             >Journals previos
           </button>
+          <button class="ni" onclick="go('eod', this)">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <rect x="3" y="3" width="18" height="18" rx="2" />
+              <path d="M3 9h18" />
+              <path d="M9 21V9" /></svg
+            >EOD (HTF/MTF/LTF)
+          </button>
           <button class="ni" onclick="go('stats', this)">
             <svg
               viewBox="0 0 24 24"
@@ -1575,6 +1587,193 @@
           <div class="pt">Journals anteriores</div>
           <div class="ps">Historial completo de anotaciones</div>
           <div id="journals-list"></div>
+        </div>
+
+        <!-- EOD (HTF/MTF/LTF) -->
+        <div class="page" id="page-eod">
+          <div class="pt">EOD — HTF / MTF / LTF</div>
+          <div class="ps">
+            Bitácora de contexto de mercado: una captura y un resumen por
+            temporalidad, cada día
+          </div>
+          <div class="card">
+            <div class="fg">
+              <label>Fecha</label><input type="date" id="eod-fecha" />
+            </div>
+            <div class="g2" style="gap: 10px; margin-bottom: 0">
+              <div>
+                <div
+                  style="
+                    font-size: 10px;
+                    color: var(--text3);
+                    font-family: var(--mono);
+                    margin-bottom: 4px;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                  "
+                >
+                  Temporalidad mayor (HTF)
+                </div>
+                <div
+                  class="img-zone"
+                  id="eod-zone-htf"
+                  onclick="document.getElementById('eod-img-htf').click()"
+                  ondragover="dragOver(event, 'eod-zone-htf')"
+                  ondragleave="dragLeave('eod-zone-htf')"
+                  ondrop="dropImg(event, 'eod-img-htf-preview', 'eod-zone-htf')"
+                >
+                  <input
+                    type="file"
+                    id="eod-img-htf"
+                    accept="image/*"
+                    onchange="previewZone(this, 'eod-img-htf-preview', 'eod-zone-htf')"
+                  />
+                  <div class="img-zone-label" id="eod-zone-htf-label">
+                    Click, arrastra, ⌘+V o Ctrl+V
+                  </div>
+                  <div class="img-zone-hint">4H · 1H · Diario</div>
+                  <img
+                    id="eod-img-htf-preview"
+                    class="img-zone-preview"
+                    alt="HTF"
+                  />
+                  <button
+                    class="img-remove"
+                    onclick="clearZone(event, 'eod-img-htf-preview', 'eod-zone-htf', 'eod-img-htf', 'eod-zone-htf-label')"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div class="fg" style="margin-top: 8px">
+                  <label>Resumen HTF</label>
+                  <textarea
+                    id="eod-resumen-htf"
+                    placeholder="Qué ves en la temporalidad mayor..."
+                  ></textarea>
+                </div>
+              </div>
+              <div>
+                <div
+                  style="
+                    font-size: 10px;
+                    color: var(--text3);
+                    font-family: var(--mono);
+                    margin-bottom: 4px;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                  "
+                >
+                  Temporalidad media (MTF)
+                </div>
+                <div
+                  class="img-zone"
+                  id="eod-zone-mtf"
+                  onclick="document.getElementById('eod-img-mtf').click()"
+                  ondragover="dragOver(event, 'eod-zone-mtf')"
+                  ondragleave="dragLeave('eod-zone-mtf')"
+                  ondrop="dropImg(event, 'eod-img-mtf-preview', 'eod-zone-mtf')"
+                >
+                  <input
+                    type="file"
+                    id="eod-img-mtf"
+                    accept="image/*"
+                    onchange="previewZone(this, 'eod-img-mtf-preview', 'eod-zone-mtf')"
+                  />
+                  <div class="img-zone-label" id="eod-zone-mtf-label">
+                    Click, arrastra, ⌘+V o Ctrl+V
+                  </div>
+                  <div class="img-zone-hint">1H · 30M</div>
+                  <img
+                    id="eod-img-mtf-preview"
+                    class="img-zone-preview"
+                    alt="MTF"
+                  />
+                  <button
+                    class="img-remove"
+                    onclick="clearZone(event, 'eod-img-mtf-preview', 'eod-zone-mtf', 'eod-img-mtf', 'eod-zone-mtf-label')"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div class="fg" style="margin-top: 8px">
+                  <label>Resumen MTF</label>
+                  <textarea
+                    id="eod-resumen-mtf"
+                    placeholder="Qué ves en la temporalidad media..."
+                  ></textarea>
+                </div>
+              </div>
+              <div>
+                <div
+                  style="
+                    font-size: 10px;
+                    color: var(--text3);
+                    font-family: var(--mono);
+                    margin-bottom: 4px;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                  "
+                >
+                  Temporalidad menor (LTF)
+                </div>
+                <div
+                  class="img-zone"
+                  id="eod-zone-ltf"
+                  onclick="document.getElementById('eod-img-ltf').click()"
+                  ondragover="dragOver(event, 'eod-zone-ltf')"
+                  ondragleave="dragLeave('eod-zone-ltf')"
+                  ondrop="dropImg(event, 'eod-img-ltf-preview', 'eod-zone-ltf')"
+                >
+                  <input
+                    type="file"
+                    id="eod-img-ltf"
+                    accept="image/*"
+                    onchange="previewZone(this, 'eod-img-ltf-preview', 'eod-zone-ltf')"
+                  />
+                  <div class="img-zone-label" id="eod-zone-ltf-label">
+                    Click, arrastra, ⌘+V o Ctrl+V
+                  </div>
+                  <div class="img-zone-hint">15M · 5M · 1M</div>
+                  <img
+                    id="eod-img-ltf-preview"
+                    class="img-zone-preview"
+                    alt="LTF"
+                  />
+                  <button
+                    class="img-remove"
+                    onclick="clearZone(event, 'eod-img-ltf-preview', 'eod-zone-ltf', 'eod-img-ltf', 'eod-zone-ltf-label')"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div class="fg" style="margin-top: 8px">
+                  <label>Resumen LTF</label>
+                  <textarea
+                    id="eod-resumen-ltf"
+                    placeholder="Qué ves en la temporalidad menor..."
+                  ></textarea>
+                </div>
+              </div>
+            </div>
+            <div class="fg">
+              <label>Resumen del día</label>
+              <textarea
+                id="eod-resumen-general"
+                placeholder="Contexto general, sesgo, qué esperas para mañana..."
+              ></textarea>
+            </div>
+            <button class="btn btn-p" onclick="saveEod()">Guardar EOD</button>
+          </div>
+
+          <div class="card" style="margin-top: 12px">
+            <div class="ct">Resumen quincenal (últimos 15 días)</div>
+            <div id="eod-quincenal"></div>
+          </div>
+
+          <div class="ct" style="margin-top: 16px; margin-bottom: 4px">
+            Registros anteriores
+          </div>
+          <div id="eod-list"></div>
         </div>
 
         <!-- ESTADÍSTICAS -->
