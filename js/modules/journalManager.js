@@ -223,6 +223,54 @@ function computeWeekCount() {
   return { filled, total: 5 };
 }
 
+/** Recorre TODO el historial de journals (no solo hacia atrás desde
+ * hoy, como computeJournalStreak) y devuelve la racha más larga que
+ * hayas tenido alguna vez. Misma regla de fin de semana: sábado y
+ * domingo no cuentan como día perdido. */
+export function computeBestJournalStreak() {
+  const dates = Object.keys(journals).sort();
+  if (!dates.length) return 0;
+  let best = 0;
+  let current = 0;
+  let prev = null;
+  for (const d of dates) {
+    if (prev) {
+      let cursor = addDaysStr(prev, 1);
+      let brokenByWeekday = false;
+      while (cursor < d) {
+        if (!isWeekend(cursor)) {
+          brokenByWeekday = true;
+          break;
+        }
+        cursor = addDaysStr(cursor, 1);
+      }
+      if (brokenByWeekday) current = 0;
+    }
+    current++;
+    if (current > best) best = current;
+    prev = d;
+  }
+  return best;
+}
+
+// Hitos que celebran la racha ACTUAL (no la histórica) con un toast.
+// localStorage (no Supabase) porque es puramente cosmético por
+// dispositivo — no hace falta sincronizarlo entre PCs.
+const STREAK_MILESTONES = [7, 30, 60, 100, 150, 200, 365];
+const STREAK_MILESTONE_KEY = "quantis_last_streak_milestone";
+
+function checkStreakMilestone(streak) {
+  const last = parseInt(localStorage.getItem(STREAK_MILESTONE_KEY) || "0", 10);
+  const reached = STREAK_MILESTONES.filter((m) => streak >= m && m > last).pop();
+  if (!reached) return;
+  localStorage.setItem(STREAK_MILESTONE_KEY, String(reached));
+  showToast(
+    "success",
+    `🔥 ${reached} días seguidos`,
+    "Racha de journaling — la disciplina se está volviendo hábito.",
+  );
+}
+
 /** Misma racha que se muestra dentro del Journal, pero renderizada en
  * el pie del sidebar (siempre visible, sin necesidad de abrir el
  * Journal). Se llama al arrancar la app y cada vez que se guarda un
@@ -234,20 +282,31 @@ export function renderSidebarStreak() {
   const n = document.getElementById("sidebar-streak-n");
   if (!el || !n) return;
   const streak = computeJournalStreak();
+  const best = computeBestJournalStreak();
   n.textContent = streak;
-  el.title = streak > 0 ? `${streak} día${streak === 1 ? "" : "s"} seguido${streak === 1 ? "" : "s"} journaleando` : "";
+  el.title =
+    streak > 0
+      ? `${streak} día${streak === 1 ? "" : "s"} seguido${streak === 1 ? "" : "s"} journaleando · Mejor racha: ${best}`
+      : "";
   el.style.display = streak > 0 ? "flex" : "none";
+  checkStreakMilestone(streak);
 }
 
 function renderJournalMeta() {
   const el = document.getElementById("journal-meta");
   if (!el) return;
   const streak = computeJournalStreak();
+  const best = computeBestJournalStreak();
   const week = computeWeekCount();
   el.innerHTML = `
     ${
       streak > 0
         ? `<div class="jmeta-pill streak"><span class="material-symbols-outlined">local_fire_department</span>${streak} día${streak === 1 ? "" : "s"} seguido${streak === 1 ? "" : "s"}</div>`
+        : ""
+    }
+    ${
+      best > 0
+        ? `<div class="jmeta-pill"><span class="material-symbols-outlined">emoji_events</span>Mejor racha: ${best}</div>`
         : ""
     }
     <div class="jmeta-pill"><span class="material-symbols-outlined">calendar_month</span>${week.filled} de ${week.total} días esta semana</div>`;
