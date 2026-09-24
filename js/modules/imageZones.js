@@ -194,21 +194,41 @@ export function initPasteHandler() {
       const reader = new FileReader();
       const page = document.querySelector(".page.active");
       if (!page) return;
-      const isRegistrar = page.id === "page-registrar";
-      if (!isRegistrar) return;
-      reader.onload = (ev) => {
-        const htfPreview = document.getElementById("t-img-htf-preview");
-        const ltfPreview = document.getElementById("t-img-ltf-preview");
-        if (!htfPreview.src || htfPreview.src === window.location.href) {
-          setZoneImg(ev.target.result, "t-img-htf-preview", "zone-htf");
-        } else if (!ltfPreview.src || ltfPreview.src === window.location.href) {
-          setZoneImg(ev.target.result, "t-img-ltf-preview", "zone-ltf");
-        } else {
-          setZoneImg(ev.target.result, "t-img-htf-preview", "zone-htf");
-        }
-      };
-      reader.readAsDataURL(file);
-      break;
+      if (page.id === "page-registrar") {
+        reader.onload = (ev) => {
+          const htfPreview = document.getElementById("t-img-htf-preview");
+          const ltfPreview = document.getElementById("t-img-ltf-preview");
+          if (!htfPreview.src || htfPreview.src === window.location.href) {
+            setZoneImg(ev.target.result, "t-img-htf-preview", "zone-htf");
+          } else if (!ltfPreview.src || ltfPreview.src === window.location.href) {
+            setZoneImg(ev.target.result, "t-img-ltf-preview", "zone-ltf");
+          } else {
+            setZoneImg(ev.target.result, "t-img-htf-preview", "zone-htf");
+          }
+        };
+        reader.readAsDataURL(file);
+        break;
+      }
+      if (page.id === "page-eod") {
+        // Mismo criterio que en Registrar trade: llena la primera zona
+        // vacía en orden HTF → MTF → LTF; si las 3 ya tienen imagen,
+        // reemplaza la primera (HTF) en vez de no hacer nada.
+        const slots = [
+          ["eod-img-htf-preview", "eod-zone-htf"],
+          ["eod-img-mtf-preview", "eod-zone-mtf"],
+          ["eod-img-ltf-preview", "eod-zone-ltf"],
+        ];
+        reader.onload = (ev) => {
+          const empty = slots.find(([previewId]) => {
+            const p = document.getElementById(previewId);
+            return !p.src || p.src === window.location.href;
+          });
+          const [previewId, zoneId] = empty || slots[0];
+          setZoneImg(ev.target.result, previewId, zoneId);
+        };
+        reader.readAsDataURL(file);
+        break;
+      }
     }
   });
 }
