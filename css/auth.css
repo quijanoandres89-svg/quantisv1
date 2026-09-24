@@ -46,7 +46,8 @@
 }
 
 .quantis-auth-logo {
-  height: 28px;
+  height: 52px;
+  width: auto;
   position: relative;
   z-index: 1;
 }
