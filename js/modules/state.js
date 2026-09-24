@@ -18,6 +18,7 @@ export const CH_KEY = "tjp_challenges_v1";
 export const PL_KEY = "tjp_plantillas_v1";
 export const RS_KEY = "kame_rulesets_v1";
 export const IK = "tjp_instruments_v1";
+export const EK = "tjp_eod_v1";
 
 // --- Sincronización con Supabase ---
 import { getSupabase, getCurrentUser } from "./supabaseClient.js";
@@ -47,6 +48,7 @@ function clone(value) {
 // --- Estado mutable compartido ---
 export let trades = [];
 export let journals = {};
+export let eodEntries = {};
 export let frenoLog = [];
 export let dayScore = 0;
 export let preChecks = {};
@@ -233,6 +235,13 @@ function loadLocalState() {
     frenoLog.length = 0;
   }
   try {
+    const r = localStorage.getItem(EK);
+    Object.keys(eodEntries).forEach((k) => delete eodEntries[k]);
+    if (r) Object.assign(eodEntries, JSON.parse(r));
+  } catch (e) {
+    Object.keys(eodEntries).forEach((k) => delete eodEntries[k]);
+  }
+  try {
     const r = localStorage.getItem(CH_KEY);
     challenges.length = 0;
     if (r) challenges.push(...JSON.parse(r));
@@ -272,6 +281,7 @@ function loadLocalState() {
 function saveLocalState() {
   safeSetItem(TK, JSON.stringify(trades));
   safeSetItem(JK, JSON.stringify(journals));
+  safeSetItem(EK, JSON.stringify(eodEntries));
   safeSetItem(FK, JSON.stringify(frenoLog));
   safeSetItem(CH_KEY, JSON.stringify(challenges));
   safeSetItem(PL_KEY, JSON.stringify(plantillas));
@@ -287,6 +297,10 @@ function applyServerState(data) {
   if (data.journals && typeof data.journals === "object" && !Array.isArray(data.journals)) {
     Object.keys(journals).forEach((k) => delete journals[k]);
     Object.assign(journals, data.journals);
+  }
+  if (data.eodEntries && typeof data.eodEntries === "object" && !Array.isArray(data.eodEntries)) {
+    Object.keys(eodEntries).forEach((k) => delete eodEntries[k]);
+    Object.assign(eodEntries, data.eodEntries);
   }
   if (Array.isArray(data.frenoLog)) {
     frenoLog.length = 0;
@@ -316,6 +330,7 @@ function emptyServerShape() {
     updatedAt: null,
     trades: [],
     journals: {},
+    eodEntries: {},
     frenoLog: [],
     challenges: [],
     plantillas: [],
@@ -384,6 +399,7 @@ function serverHasRealData(data) {
   return (
     (Array.isArray(data.trades) && data.trades.length > 0) ||
     (data.journals && Object.keys(data.journals).length > 0) ||
+    (data.eodEntries && Object.keys(data.eodEntries).length > 0) ||
     (Array.isArray(data.frenoLog) && data.frenoLog.length > 0) ||
     (Array.isArray(data.challenges) && data.challenges.length > 0) ||
     (Array.isArray(data.plantillas) && data.plantillas.length > 0) ||
@@ -408,6 +424,7 @@ async function migrateLocalStateToServer(data) {
     version: data.version || SERVER_STATE_VERSION,
     trades: trades.length ? clone(trades) : data.trades || [],
     journals: Object.keys(journals).length ? clone(journals) : data.journals || {},
+    eodEntries: Object.keys(eodEntries).length ? clone(eodEntries) : data.eodEntries || {},
     frenoLog: frenoLog.length ? clone(frenoLog) : data.frenoLog || [],
     challenges: challenges.length ? clone(challenges) : data.challenges || [],
     plantillas: plantillas.length ? clone(plantillas) : data.plantillas || [],
@@ -420,7 +437,7 @@ async function migrateLocalStateToServer(data) {
 }
 
 function mergeCollection(key, serverValue, localValue) {
-  if (key === "journals") {
+  if (key === "journals" || key === "eodEntries") {
     return { ...(serverValue || {}), ...(localValue || {}) };
   }
 
@@ -454,6 +471,7 @@ function mergeCollection(key, serverValue, localValue) {
 const COLLECTION_REF = {
   trades: () => trades,
   journals: () => journals,
+  eodEntries: () => eodEntries,
   frenoLog: () => frenoLog,
   challenges: () => challenges,
   plantillas: () => plantillas,
@@ -567,6 +585,11 @@ export function saveTrades() {
 export function saveJournals() {
   const ok = safeSetItem(JK, JSON.stringify(journals));
   syncStateToServer("journals");
+  return ok;
+}
+export function saveEodEntries() {
+  const ok = safeSetItem(EK, JSON.stringify(eodEntries));
+  syncStateToServer("eodEntries");
   return ok;
 }
 export function saveFrenoLog() {
