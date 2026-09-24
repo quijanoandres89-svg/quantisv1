@@ -37,6 +37,7 @@ import * as Toast from "./modules/toast.js";
 import { toggleSidebar, closeSidebar } from "./modules/mobile.js";
 import * as SettingsPanel from "./modules/settingsPanel.js";
 import * as Instruments from "./modules/instruments.js";
+import * as Eod from "./modules/eod.js";
 import * as Auth from "./modules/auth.js";
 
 /**
@@ -62,6 +63,7 @@ function go(page, el) {
   if (page === "dash") Dashboard.renderDash();
   if (page === "historial") Historial.renderHistorial();
   if (page === "journals") JournalManager.renderJournals();
+  if (page === "eod") Eod.renderEod();
   if (page === "stats") Statistics.renderStats();
   if (page === "journal") JournalManager.initJournal();
   if (page === "reporte") Statistics.renderReporte();
@@ -210,6 +212,10 @@ Object.assign(window, {
   saveInstrumentForm: Instruments.saveInstrumentForm,
   deleteInstrument: Instruments.deleteInstrument,
   onInstrumentTypeChange: Instruments.onInstrumentTypeChange,
+  // eod
+  saveEod: Eod.saveEod,
+  verImagenesEod: Eod.verImagenesEod,
+  toggleEod: Eod.toggleEod,
 });
 
 // --- Arranque ---
