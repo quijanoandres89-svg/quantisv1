@@ -33,12 +33,6 @@ import { renderChallengeAlerts } from "./alertSystem.js";
 import { calcChProgress } from "./challengeManager.js";
 import { buildGrid, tradeMapByDate, summarize } from "./calendarPro.js";
 
-// Con menos operaciones decisivas que esto, un WR bajo puede ser
-// puro ruido estadístico (ej. 1 de 3 = 33%) — no es motivo válido
-// para el bloqueo rojo. Por debajo de este mínimo, el WR bajo cae
-// como mucho en amarillo (precaución), nunca en rojo.
-const MIN_DECISIVOS_PARA_WR_ROJO = 8;
-
 /** Semáforo de disciplina: puede/no puede operar según el historial reciente. */
 export function getSem() {
   if (trades.length < 3)
@@ -59,6 +53,11 @@ export function getSem() {
     .filter((t) => t.res === "TP" && t.rr)
     .map((t) => parseFloat(t.rr));
   const rr = rrA.length ? rrA.reduce((a, b) => a + b, 0) / rrA.length : 0;
+  // Con menos operaciones decisivas que esto, un WR bajo puede ser puro
+  // ruido estadístico (ej. 1 de 3 = 33%) — no es motivo válido para el
+  // bloqueo rojo. Por debajo de este mínimo, el WR bajo cae como mucho
+  // en amarillo (precaución), nunca en rojo.
+  const MIN_DECISIVOS_PARA_WR_ROJO = 8;
   const wrBajoConfiable = decisivos >= MIN_DECISIVOS_PARA_WR_ROJO && wr < 0.35;
   if (consec || wrBajoConfiable)
     return {
@@ -108,7 +107,7 @@ export function renderDash() {
   };
   const c = cm[s.l];
   document.getElementById("dash-sem").innerHTML =
-    `<div class="sem-card" style="background:${c[0]};border-color:${c[1]};color:${c[2]}"><div class="si" style="background:${c[1]}">${c[3]}</div><div><div class="st" style="color:${c[2]}">${s.title}</div><div class="ss" style="color:${c[2]}">${s.sub}</div></div></div>`;
+    `<div class="sem-card${s.l === "r" ? " sem-pulse" : ""}" style="background:${c[0]};border-color:${c[1]};color:${c[2]}"><div class="si" style="background:${c[1]}">${c[3]}</div><div><div class="st" style="color:${c[2]}">${s.title}</div><div class="ss" style="color:${c[2]}">${s.sub}</div></div></div>`;
   renderAlerts();
   renderChallengeAlerts("dash-rule-alerts");
   const tot = trades.length,
