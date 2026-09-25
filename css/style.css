@@ -196,6 +196,7 @@ body.light .logo-light-theme {
 }
 .sidebar-streak-compact .material-symbols-outlined {
   font-size: 15px;
+  animation: streakFlicker 2.4s ease-in-out infinite;
 }
 #open-settings-btn .material-symbols-outlined {
   font-variation-settings:
@@ -339,6 +340,7 @@ body.light .logo-light-theme {
 }
 .page.active {
   display: block;
+  animation: pageIn 0.28s ease;
 }
 .pt {
   font-size: 20px;
@@ -399,6 +401,13 @@ body.light .logo-light-theme {
   border: 1px solid var(--border);
   border-radius: var(--rs);
   padding: 12px;
+  transition:
+    transform 0.15s ease,
+    border-color 0.15s ease;
+}
+.metric:hover {
+  transform: translateY(-2px);
+  border-color: var(--border2);
 }
 .mv {
   font-size: 22px;
@@ -422,6 +431,9 @@ body.light .logo-light-theme {
   align-items: center;
   gap: 12px;
   border: 1px solid;
+}
+.sem-card.sem-pulse {
+  animation: semPulse 0.7s ease 3;
 }
 .si {
   width: 36px;
@@ -511,6 +523,9 @@ select option {
 }
 .btn:hover {
   background: var(--bg4);
+}
+.btn:active {
+  transform: scale(0.96);
 }
 .btn-p {
   background: var(--acc);
@@ -759,10 +774,15 @@ select option {
   padding: 13px;
   margin-bottom: 7px;
   cursor: pointer;
-  transition: border-color 0.15s;
+  transition:
+    border-color 0.15s,
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
 }
 .ji:hover {
   border-color: var(--border2);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.14);
 }
 .jh {
   display: flex;
@@ -2770,4 +2790,58 @@ select option {
 }
 .cl-seg.on {
   background: var(--green);
+}
+
+/* ============================================================
+   ANIMACIONES — capa de movimiento agregada para que la app se
+   sienta menos estática. Todo CSS puro (@keyframes + transiciones),
+   sin dependencias nuevas ni cambios de arquitectura.
+   ============================================================ */
+@keyframes pageIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes semPulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.015);
+    box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.03);
+  }
+}
+
+@keyframes streakFlicker {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.75;
+    transform: scale(0.94);
+  }
+}
+
+/* Respeta la preferencia del sistema operativo de reducir movimiento
+   (accesibilidad) — apaga toda esta capa, no solo una animación. */
+@media (prefers-reduced-motion: reduce) {
+  .page.active,
+  .sem-card.sem-pulse,
+  .sidebar-streak-compact .material-symbols-outlined {
+    animation: none !important;
+  }
+  .btn,
+  .ji,
+  .metric {
+    transition: none !important;
+  }
 }
