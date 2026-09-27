@@ -33,6 +33,7 @@ import {
   themeColors,
   lastValuePillPlugin,
   escapeHTML,
+  animateCountUp,
 } from "./utils.js";
 import * as TradeEngine from "./tradeEngine.js";
 import { tradePnlUSD } from "./tradeManager.js";
@@ -91,13 +92,19 @@ export function renderStats() {
   const planPct = Math.round(
     (trades.filter((t) => t.plan === "Sí").length / tot) * 100,
   );
-  document.getElementById("st-wr").innerHTML =
-    `<span style="color:${wr >= 50 ? "var(--green)" : "var(--red)"}">${wr}%</span>`;
+  animateCountUp(document.getElementById("st-wr"), wr, {
+    suffix: "%",
+    color: wr >= 50 ? "var(--green)" : "var(--red)",
+  });
   document.getElementById("st-wrsub").textContent =
     `${wins} TP · ${trades.filter((t) => t.res === "SL").length} SL · ${trades.filter((t) => t.res === "BE").length} BE (BE no cuenta en WR)`;
-  document.getElementById("st-rr").innerHTML = `<span>${rr}</span>`;
-  document.getElementById("st-pl").innerHTML =
-    `<span style="color:${planPct >= 80 ? "var(--green)" : "var(--yellow)"}">${planPct}%</span>`;
+  animateCountUp(document.getElementById("st-rr"), rr === "-" ? "-" : parseFloat(rr), {
+    decimals: 2,
+  });
+  animateCountUp(document.getElementById("st-pl"), planPct, {
+    suffix: "%",
+    color: planPct >= 80 ? "var(--green)" : "var(--yellow)",
+  });
   const dias = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
   const dWR = dias.map((_, i) => {
     const dt = trades.filter((t) => {
