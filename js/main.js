@@ -103,6 +103,7 @@ async function init() {
   ChallengeManager.renderChallenges();
   Backup.startAutoBackup();
   JournalManager.renderSidebarStreak();
+  document.getElementById("app-loading")?.classList.add("hidden");
 }
 
 // --- Exposición en window: API pública que el HTML llama por onclick/onchange/oninput ---
@@ -217,6 +218,29 @@ Object.assign(window, {
   verImagenesEod: Eod.verImagenesEod,
   toggleEod: Eod.toggleEod,
 });
+
+// --- Chart.js: animación de entrada global ---
+// Se configura una sola vez acá y aplica a las 13 gráficas del
+// proyecto (dashboard, estadísticas, challenges, replay) sin tocar
+// cada `new Chart(...)` individualmente. `delay` solo escalona la
+// animación INICIAL (ctx.type/mode lo distinguen de un update por
+// hover o por cambio de datos), para que no se sienta lenta al
+// interactuar.
+if (window.Chart) {
+  const reduceMotion = window.matchMedia?.(
+    "(prefers-reduced-motion: reduce)",
+  ).matches;
+  window.Chart.defaults.animation = reduceMotion
+    ? false
+    : {
+        duration: 650,
+        easing: "easeOutQuart",
+        delay: (ctx) =>
+          ctx.type === "data" && ctx.mode === "default" && !ctx.dropped
+            ? ctx.dataIndex * 18 + ctx.datasetIndex * 60
+            : 0,
+      };
+}
 
 // --- Arranque ---
 Theme.applySavedTheme(); // antes: IIFE de tema al cargar script.js
