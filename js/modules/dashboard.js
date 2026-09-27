@@ -25,6 +25,7 @@ import {
   lastValuePillPlugin,
   tradeDurationMinutes,
   escapeHTML,
+  animateCountUp,
 } from "./utils.js";
 import * as TradeEngine from "./tradeEngine.js";
 import { tradePnlUSD, usdExtremes } from "./tradeManager.js";
@@ -126,18 +127,30 @@ export function renderDash() {
     ? (rrA.reduce((a, b) => a + b, 0) / rrA.length).toFixed(1)
     : "-";
   document.getElementById("dash-metrics").innerHTML = `
-    <div class="metric"><div class="mv">${tot}</div><div class="ml"><span class="material-symbols-outlined icons">
+    <div class="metric"><div class="mv" id="dm-total">0</div><div class="ml"><span class="material-symbols-outlined icons">
 calculate
 </span>Total trades</div></div>
-    <div class="metric"><div class="mv" style="color:${wr >= 50 ? "var(--green)" : "var(--red)"}">${wr}%</div><div class="ml"><span class="material-symbols-outlined icons">
+    <div class="metric"><div class="mv" id="dm-wr">0%</div><div class="ml"><span class="material-symbols-outlined icons">
 radar
 </span>Win rate</div></div>
-    <div class="metric"><div class="mv">${rr}</div><div class="ml"><span class="material-symbols-outlined icons">
+    <div class="metric"><div class="mv" id="dm-rr">0</div><div class="ml"><span class="material-symbols-outlined icons">
 model_training
 </span>RR promedio</div></div>
-    <div class="metric"><div class="mv" style="color:${plan >= 80 ? "var(--green)" : "var(--yellow)"}">${plan}%</div><div class="ml"><span class="material-symbols-outlined icons">
+    <div class="metric"><div class="mv" id="dm-plan">0%</div><div class="ml"><span class="material-symbols-outlined icons">
 book_ribbon
 </span>Plan respetado</div></div>`;
+  animateCountUp(document.getElementById("dm-total"), tot);
+  animateCountUp(document.getElementById("dm-wr"), parseFloat(wr) || 0, {
+    suffix: "%",
+    color: wr >= 50 ? "var(--green)" : "var(--red)",
+  });
+  animateCountUp(document.getElementById("dm-rr"), rr === "-" ? "-" : parseFloat(rr), {
+    decimals: 1,
+  });
+  animateCountUp(document.getElementById("dm-plan"), parseFloat(plan) || 0, {
+    suffix: "%",
+    color: plan >= 80 ? "var(--green)" : "var(--yellow)",
+  });
   renderDashKPIs();
   renderDashGauges();
   renderDashCalendar();
@@ -278,11 +291,16 @@ function renderGaugeCard(chartKey, canvasId, list) {
   const netUSD = usdVals.reduce((a, v) => a + v, 0);
   const hasAnyUSD = usdVals.length > 0;
 
-  document.getElementById(`${canvasId}-value`).textContent = hasAnyUSD
-    ? fmtUSD(netUSD)
-    : "—";
-  document.getElementById(`${canvasId}-value`).style.color =
-    netUSD >= 0 ? "var(--green)" : "var(--red)";
+  const valueEl = document.getElementById(`${canvasId}-value`);
+  valueEl.style.color = netUSD >= 0 ? "var(--green)" : "var(--red)";
+  if (hasAnyUSD) {
+    animateCountUp(valueEl, netUSD, {
+      decimals: 2,
+      prefix: netUSD >= 0 ? " $" : "$",
+    });
+  } else {
+    valueEl.textContent = "—";
+  }
   document.getElementById(`${canvasId}-wins`).innerHTML =
     `Ganadas (${wins.length})<br>$${winsUSD.toFixed(2)}`;
   document.getElementById(`${canvasId}-winrate`).innerHTML =
