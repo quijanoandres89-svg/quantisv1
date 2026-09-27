@@ -229,3 +229,33 @@ export function lastValuePillPlugin(color, fmt = (v) => v) {
     },
   };
 }
+
+/** Anima un número desde 0 hasta `endValue` (métricas principales de
+ * Dashboard/Estadísticas, mejora "count-up"). No cambia ningún
+ * cálculo — solo cómo se pinta el resultado final. Si `endValue` no
+ * es un número finito (ej. "-" cuando no hay datos suficientes), o
+ * si el sistema tiene activado "reducir movimiento", pinta el valor
+ * final directo sin animar. */
+export function animateCountUp(el, endValue, opts = {}) {
+  if (!el) return;
+  const { duration = 700, decimals = 0, prefix = "", suffix = "", color } = opts;
+  if (color !== undefined) el.style.color = color;
+  const finalText = (v) => `${prefix}${v.toFixed(decimals)}${suffix}`;
+  if (typeof endValue !== "number" || !isFinite(endValue)) {
+    el.textContent = `${prefix}${endValue}${suffix}`;
+    return;
+  }
+  if (window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches) {
+    el.textContent = finalText(endValue);
+    return;
+  }
+  const startTime = performance.now();
+  function tick(now) {
+    const p = Math.min((now - startTime) / duration, 1);
+    const eased = 1 - Math.pow(1 - p, 3); // easeOutCubic
+    el.textContent = finalText(endValue * eased);
+    if (p < 1) requestAnimationFrame(tick);
+    else el.textContent = finalText(endValue);
+  }
+  requestAnimationFrame(tick);
+}
