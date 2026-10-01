@@ -841,6 +841,14 @@ select option {
   color: var(--text3);
   font-size: 12px;
 }
+.empty::before {
+  content: "inbox";
+  display: block;
+  font-family: "Material Symbols Outlined";
+  font-size: 26px;
+  margin-bottom: 8px;
+  opacity: 0.45;
+}
 
 /* UPLOADER */
 .img-upload-zone {
@@ -2929,4 +2937,35 @@ select option {
     animation: none !important;
     opacity: 1;
   }
+}
+
+/* --- Anillo de foco coherente para navegación con teclado ---
+   Antes .btn, .ni y .ji no tenían ningún :focus definido — al
+   navegar con Tab quedaban sin indicación o con el contorno azul
+   genérico del navegador. :focus-visible (no :focus a secas) para
+   que solo aparezca navegando con teclado, no en cada click de mouse. */
+.btn:focus-visible,
+.ni:focus-visible,
+.ji:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 2px;
+}
+
+/* --- Paginador (Historial / Journals / EOD) --- */
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 14px;
+  padding-top: 4px;
+}
+.pager-label {
+  font-size: 11px;
+  color: var(--text3);
+  font-family: var(--mono);
+}
+.pager .btn:disabled {
+  opacity: 0.35;
+  cursor: default;
 }
