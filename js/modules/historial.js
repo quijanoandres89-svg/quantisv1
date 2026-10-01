@@ -3,31 +3,55 @@
    ============================================================ */
 
 import { trades } from "./state.js";
-import { fmtShort, fmtUSD, calcDuracion, escapeHTML } from "./utils.js";
+import {
+  fmtShort,
+  fmtUSD,
+  calcDuracion,
+  escapeHTML,
+  paginate,
+  paginationControlsHTML,
+} from "./utils.js";
 import { tradePnlUSD } from "./tradeManager.js";
 import * as TradeEngine from "./tradeEngine.js";
 
+const PAGE_SIZE = 20;
+let histPage = 1;
+
+// [window] onclick="changeHistorialPage(±1)" en el paginador
+export function changeHistorialPage(delta) {
+  histPage += delta;
+  renderHistorial(false);
+}
+
 // [window] go('historial', ...) y onchange de los filtros f-par/f-res/f-plan
-export function renderHistorial() {
+export function renderHistorial(resetPage = true) {
+  if (resetPage) histPage = 1;
   const fp = document.getElementById("f-par").value,
     fr = document.getElementById("f-res").value,
     fpl = document.getElementById("f-plan").value;
+  const fnotas = (document.getElementById("f-notas")?.value || "")
+    .trim()
+    .toLowerCase();
   const f = [...trades]
     .reverse()
     .filter(
       (t) =>
         (!fp || t.par === fp) &&
         (!fr || t.res === fr) &&
-        (!fpl || t.plan === fpl),
+        (!fpl || t.plan === fpl) &&
+        (!fnotas || String(t.notas || "").toLowerCase().includes(fnotas)),
     );
   if (!f.length) {
     document.getElementById("hist-list").innerHTML =
       `<div class="empty">Sin trades con estos filtros</div>`;
     return;
   }
-  document.getElementById("hist-list").innerHTML = f
-    .map((t) => {
-      const pnl = tradePnlUSD(t);
+  const { items, page, totalPages } = paginate(f, histPage, PAGE_SIZE);
+  histPage = page;
+  document.getElementById("hist-list").innerHTML =
+    items
+      .map((t) => {
+        const pnl = tradePnlUSD(t);
       const eff = TradeEngine.captureEfficiency(t);
       return `
     <div class="ti">
@@ -50,6 +74,12 @@ export function renderHistorial() {
       </div>
       ${t.notas ? `<div style="font-size:11px;color:var(--text3);padding:6px 8px;background:var(--bg3);border-radius:var(--rs);border:1px solid var(--border);font-family:var(--mono);margin-top:4px">${escapeHTML(t.notas)}</div>` : ""}
       </div>`;
-    })
-    .join("");
+      })
+      .join("") +
+    paginationControlsHTML(
+      page,
+      totalPages,
+      "changeHistorialPage(-1)",
+      "changeHistorialPage(1)",
+    );
 }
