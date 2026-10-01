@@ -669,11 +669,12 @@
         <!-- MODO SESION OVERLAY -->
         <div class="session-overlay" id="session-overlay">
           <button
-            class="btn btn-sm"
-            style="position: absolute; top: 20px; right: 20px"
+            class="session-close-btn"
             onclick="cerrarSesion()"
+            aria-label="Cerrar modo sesión"
+            data-tooltip="Cerrar modo sesión"
           >
-            ✕ Cerrar modo sesión
+            <span class="material-symbols-outlined">close</span>
           </button>
           <div style="width: 100%; max-width: 520px">
             <div id="session-sem-card" style="margin-bottom: 20px"></div>
@@ -1576,12 +1577,12 @@
                 </select>
               </div>
             </div>
-            <div class="fg">
-              <label>Buscar en notas</label
-              ><input
+            <div class="search-wrap">
+              <span class="material-symbols-outlined">search</span>
+              <input
                 type="text"
                 id="f-notas"
-                placeholder="Ej: FOMO, NFP, ruptura..."
+                placeholder="Buscar en notas — FOMO, NFP, ruptura..."
                 oninput="renderHistorial()"
               />
             </div>
@@ -1593,7 +1594,8 @@
         <div class="page" id="page-journals">
           <div class="pt">Journals anteriores</div>
           <div class="ps">Historial completo de anotaciones</div>
-          <div class="fg" style="max-width: 360px">
+          <div class="search-wrap">
+            <span class="material-symbols-outlined">search</span>
             <input
               type="text"
               id="journals-search"
@@ -1761,7 +1763,8 @@
           <div class="ct" style="margin-top: 16px; margin-bottom: 4px">
             Registros anteriores
           </div>
-          <div class="fg" style="max-width: 360px">
+          <div class="search-wrap">
+            <span class="material-symbols-outlined">search</span>
             <input
               type="text"
               id="eod-search"
