@@ -16,7 +16,7 @@
    ============================================================ */
 
 import { eodEntries, saveEodEntries } from "./state.js";
-import { today, fmtDate, daysAgo, escapeHTML } from "./utils.js";
+import { today, fmtDate, daysAgo, escapeHTML, paginate, paginationControlsHTML } from "./utils.js";
 import { showToast } from "./toast.js";
 import { clearZoneManual } from "./imageZones.js";
 import * as ImageStore from "./imageStore.js";
@@ -160,19 +160,50 @@ export function toggleEod(id) {
   if (el) el.classList.toggle("open");
 }
 
-function renderEodList() {
-  const dates = Object.keys(eodEntries).sort().reverse();
+const EOD_PAGE_SIZE = 20;
+let eodListPage = 1;
+
+// [window] onclick="changeEodPage(±1)" en el paginador
+export function changeEodPage(delta) {
+  eodListPage += delta;
+  renderEodList(false);
+}
+
+const EOD_SEARCH_FIELDS = ["resumenHTF", "resumenMTF", "resumenLTF", "resumenGeneral"];
+
+function eodMatchesQuery(e, q) {
+  if (!q) return true;
+  return EOD_SEARCH_FIELDS.some((f) => String(e[f] || "").toLowerCase().includes(q));
+}
+
+// [window] go('eod', ...) y oninput="renderEodList()" en el buscador
+export function renderEodList(resetPage = true) {
+  if (resetPage) eodListPage = 1;
+  const query = (document.getElementById("eod-search")?.value || "")
+    .trim()
+    .toLowerCase();
+  const allDates = Object.keys(eodEntries)
+    .filter((d) => eodMatchesQuery(eodEntries[d], query))
+    .sort()
+    .reverse();
   const el = document.getElementById("eod-list");
-  if (!dates.length) {
-    el.innerHTML = `<div class="empty">Sin registros EOD todavía</div>`;
+  if (!allDates.length) {
+    el.innerHTML = `<div class="empty">${query ? "Sin registros que coincidan con la búsqueda" : "Sin registros EOD todavía"}</div>`;
     return;
   }
-  el.innerHTML = dates
-    .map((d) => {
+  const { items: dates, page, totalPages } = paginate(
+    allDates,
+    eodListPage,
+    EOD_PAGE_SIZE,
+  );
+  eodListPage = page;
+  el.innerHTML =
+    dates
+      .map((d) => {
       const e = eodEntries[d];
       const nImgs = [e.imgHTF, e.imgMTF, e.imgLTF].filter(Boolean).length;
       const idSafe = d.replace(/-/g, "");
-      return `<div class="ji" onclick="toggleEod('eod-d-${idSafe}')">
+      return `<div class="ji" tabindex="0" role="button" onclick="toggleEod('eod-d-${idSafe}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleEod('eod-d-${idSafe}')}">
       <div class="jh">
         <div class="jdate">${fmtDate(d)}</div>
         ${nImgs ? `<span class="badge binf">${nImgs} captura${nImgs === 1 ? "" : "s"}</span>` : ""}
@@ -186,8 +217,14 @@ function renderEodList() {
         ${e.resumenGeneral ? `<div class="jf"><div class="jfl">Resumen del día</div><div class="jfv">${escapeHTML(e.resumenGeneral)}</div></div>` : ""}
       </div>
     </div>`;
-    })
-    .join("");
+      })
+      .join("") +
+    paginationControlsHTML(
+      page,
+      totalPages,
+      "changeEodPage(-1)",
+      "changeEodPage(1)",
+    );
 }
 
 /** Resumen automático de los últimos 15 días con registro EOD: no
