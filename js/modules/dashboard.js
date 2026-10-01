@@ -514,17 +514,6 @@ export function renderEquityChart() {
         plugins: {
           legend: { display: false },
           tooltip: {
-            backgroundColor: "#0d0f14",
-            titleColor: "#e5e7eb",
-            titleFont: { size: 11, weight: "600" },
-            bodyColor: "#e5e7eb",
-            bodyFont: { size: 11 },
-            padding: 10,
-            cornerRadius: 8,
-            displayColors: true,
-            boxWidth: 8,
-            boxHeight: 8,
-            boxPadding: 4,
             callbacks: {
               title: (items) => `Trade ${items[0].label}`,
               label: (item) =>
