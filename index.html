@@ -11,6 +11,9 @@
       href="img/quantis_favicon32x32.png"
       type="image/x-icon"
     />
+    <link rel="manifest" href="manifest.json" />
+    <link rel="apple-touch-icon" href="img/icon-192.png" />
+    <meta name="theme-color" content="#17191c" />
     <link
       href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;500;600&display=swap"
       rel="stylesheet"
@@ -490,7 +493,7 @@
               <rect x="3" y="3" width="18" height="18" rx="2" />
               <path d="M3 9h18" />
               <path d="M9 21V9" /></svg
-            >EOD
+            >EOD (HTF/MTF/LTF)
           </button>
           <button class="ni" onclick="go('stats', this)">
             <svg
@@ -1573,6 +1576,15 @@
                 </select>
               </div>
             </div>
+            <div class="fg">
+              <label>Buscar en notas</label
+              ><input
+                type="text"
+                id="f-notas"
+                placeholder="Ej: FOMO, NFP, ruptura..."
+                oninput="renderHistorial()"
+              />
+            </div>
           </div>
           <div id="hist-list"></div>
         </div>
@@ -1581,12 +1593,20 @@
         <div class="page" id="page-journals">
           <div class="pt">Journals anteriores</div>
           <div class="ps">Historial completo de anotaciones</div>
+          <div class="fg" style="max-width: 360px">
+            <input
+              type="text"
+              id="journals-search"
+              placeholder="Buscar en setups, razones, aprendizajes..."
+              oninput="renderJournals()"
+            />
+          </div>
           <div id="journals-list"></div>
         </div>
 
         <!-- EOD (HTF/MTF/LTF) -->
         <div class="page" id="page-eod">
-          <div class="pt">EOD</div>
+          <div class="pt">EOD — HTF / MTF / LTF</div>
           <div class="ps">
             Bitácora de contexto de mercado: una captura y un resumen por
             temporalidad, cada día
@@ -1617,7 +1637,7 @@
                   <div class="img-zone-label" id="eod-zone-htf-label">
                     Click, arrastra, ⌘+V o Ctrl+V
                   </div>
-                  <div class="img-zone-hint">Diario · 4H · 1H</div>
+                  <div class="img-zone-hint">4H · 1H · Diario</div>
                   <img
                     id="eod-img-htf-preview"
                     class="img-zone-preview"
@@ -1659,7 +1679,7 @@
                   <div class="img-zone-label" id="eod-zone-mtf-label">
                     Click, arrastra, ⌘+V o Ctrl+V
                   </div>
-                  <div class="img-zone-hint">30m · 15m</div>
+                  <div class="img-zone-hint">1H · 30M</div>
                   <img
                     id="eod-img-mtf-preview"
                     class="img-zone-preview"
@@ -1701,7 +1721,7 @@
                   <div class="img-zone-label" id="eod-zone-ltf-label">
                     Click, arrastra, ⌘+V o Ctrl+V
                   </div>
-                  <div class="img-zone-hint">5m · 3m · 1m</div>
+                  <div class="img-zone-hint">15M · 5M · 1M</div>
                   <img
                     id="eod-img-ltf-preview"
                     class="img-zone-preview"
@@ -1740,6 +1760,14 @@
 
           <div class="ct" style="margin-top: 16px; margin-bottom: 4px">
             Registros anteriores
+          </div>
+          <div class="fg" style="max-width: 360px">
+            <input
+              type="text"
+              id="eod-search"
+              placeholder="Buscar en resúmenes HTF/MTF/LTF..."
+              oninput="renderEodList()"
+            />
           </div>
           <div id="eod-list"></div>
         </div>
