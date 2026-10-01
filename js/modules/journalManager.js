@@ -19,8 +19,8 @@
    - Tier 3: autosave silencioso con indicador, resumen semanal.
    ============================================================ */
 
-import { journals, preChecks, dayScore, setDayScore, saveJournals, CL } from "./state.js";
-import { today, daysAgo, addDaysStr, isWeekend, fmtDate, weekStart, escapeHTML } from "./utils.js";
+import { journals, eodEntries, preChecks, dayScore, setDayScore, saveJournals, CL } from "./state.js";
+import { today, daysAgo, addDaysStr, isWeekend, fmtDate, weekStart, escapeHTML, paginate, paginationControlsHTML } from "./utils.js";
 import { updateSessionCL } from "./session.js";
 import { showToast } from "./toast.js";
 
@@ -41,9 +41,13 @@ let autosaveErrorShown = false;
 
 export function renderDashJournal() {
   const j = journals[today()];
+  const eodHoy = eodEntries[today()];
+  const eodLine = eodHoy
+    ? `<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--green);margin-top:8px"><span class="material-symbols-outlined" style="font-size:14px">check_circle</span>EOD de hoy registrado</div>`
+    : `<div style="display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text3);margin-top:8px">Sin EOD hoy.<button class="btn btn-sm" onclick="go('eod',null)">Ir a EOD</button></div>`;
   if (!j) {
     document.getElementById("dash-journal").innerHTML =
-      `<div style="display:flex;align-items:center;gap:8px;color:var(--text3);font-size:12px">Sin journal hoy.<button class="btn btn-sm btn-p" style="margin-left:6px" onclick="go('journal',null)">Ir al journal</button></div>`;
+      `<div style="display:flex;align-items:center;gap:8px;color:var(--text3);font-size:12px">Sin journal hoy.<button class="btn btn-sm btn-p" style="margin-left:6px" onclick="go('journal',null)">Ir al journal</button></div>${eodLine}`;
     return;
   }
   document.getElementById("dash-journal").innerHTML = `
@@ -53,7 +57,8 @@ export function renderDashJournal() {
       <div><div style="font-size:9px;color:var(--text3);font-family:var(--mono);text-transform:uppercase">Calificación</div><div style="font-size:13px;font-weight:600;margin-top:2px">${escapeHTML(j.score) || "—"}/10</div></div>
     </div>
     ${j.setup ? `<div style="font-size:11px;color:var(--text3);padding:7px 9px;background:var(--bg3);border-radius:var(--rs);border:1px solid var(--border);font-family:var(--mono)"><strong style="color:var(--text2)">Setup:</strong> ${escapeHTML(j.setup)}</div>` : ""}
-    ${j.apr ? `<div style="font-size:11px;color:var(--text3);padding:7px 9px;background:var(--bg3);border-radius:var(--rs);border:1px solid var(--border);margin-top:5px;font-family:var(--mono)"><strong style="color:var(--text2)">Aprendizaje:</strong> ${escapeHTML(j.apr)}</div>` : ""}`;
+    ${j.apr ? `<div style="font-size:11px;color:var(--text3);padding:7px 9px;background:var(--bg3);border-radius:var(--rs);border:1px solid var(--border);margin-top:5px;font-family:var(--mono)"><strong style="color:var(--text2)">Aprendizaje:</strong> ${escapeHTML(j.apr)}</div>` : ""}
+    ${eodLine}`;
 }
 
 /* ------------------------------------------------------------
@@ -509,18 +514,63 @@ export function saveJournal() {
   showToast("success", "Journal guardado", "");
 }
 
+const JOURNALS_PAGE_SIZE = 20;
+let journalsPage = 1;
+
+// [window] onclick="changeJournalsPage(±1)" en el paginador
+export function changeJournalsPage(delta) {
+  journalsPage += delta;
+  renderJournals(false);
+}
+
+const JOURNALS_SEARCH_FIELDS = [
+  "sesgo",
+  "setup",
+  "setup-alt",
+  "niv",
+  "razon",
+  "op",
+  "apr",
+  "dif",
+  "sorp",
+  "fallo",
+  "prev",
+  "emergente-desc",
+];
+
+function journalMatchesQuery(j, q) {
+  if (!q) return true;
+  return JOURNALS_SEARCH_FIELDS.some((f) =>
+    String(j[f] || "").toLowerCase().includes(q),
+  );
+}
+
 // [window] go('journals', ...) la dispara desde main.js
-export function renderJournals() {
-  const dates = Object.keys(journals).sort().reverse();
-  if (!dates.length) {
+export function renderJournals(resetPage = true) {
+  if (resetPage) journalsPage = 1;
+  const query = (document.getElementById("journals-search")?.value || "")
+    .trim()
+    .toLowerCase();
+  const allDates = Object.keys(journals)
+    .filter((d) => journalMatchesQuery(journals[d], query))
+    .sort()
+    .reverse();
+  if (!allDates.length) {
     document.getElementById("journals-list").innerHTML =
-      `<div class="empty">Sin journals guardados todavía</div>`;
+      `<div class="empty">${query ? "Sin journals que coincidan con la búsqueda" : "Sin journals guardados todavía"}</div>`;
     return;
   }
-  document.getElementById("journals-list").innerHTML = dates
-    .map((d) => {
+  const { items: dates, page, totalPages } = paginate(
+    allDates,
+    journalsPage,
+    JOURNALS_PAGE_SIZE,
+  );
+  journalsPage = page;
+  document.getElementById("journals-list").innerHTML =
+    dates
+      .map((d) => {
       const j = journals[d];
-      return `<div class="ji" onclick="toggleJ('jd-${d.replace(/-/g, "")}')">
+      return `<div class="ji" tabindex="0" role="button" onclick="toggleJ('jd-${d.replace(/-/g, "")}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleJ('jd-${d.replace(/-/g, "")}')}">
       <div class="jh">
         <div class="jdate">${fmtDate(d)}</div>
         <div style="display:flex;gap:4px;align-items:center">
@@ -545,8 +595,14 @@ export function renderJournals() {
         ${j.plan === "No" && j.prev ? `<div class="jf"><div class="jfl" style="color:var(--yellow)">Acción preventiva</div><div class="jfv" style="border-color:var(--ybr)">${escapeHTML(j.prev)}</div></div>` : ""}
       </div>
     </div>`;
-    })
-    .join("");
+      })
+      .join("") +
+    paginationControlsHTML(
+      page,
+      totalPages,
+      "changeJournalsPage(-1)",
+      "changeJournalsPage(1)",
+    );
 }
 
 // [window] onclick="toggleJ('jd-...')"
