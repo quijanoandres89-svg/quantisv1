@@ -13,10 +13,24 @@
    reconstruye acá (al cargar y en cada toggle), no en el HTML.
    ============================================================ */
 
+import { chartTooltipStyle } from "./utils.js";
+
 const ECON_CAL_CONTAINER_ID = "econ-cal-widget-container";
 
 function currentColorTheme() {
   return document.body.classList.contains("light") ? "light" : "dark";
+}
+
+/** Refresca el estilo global de los tooltips de Chart.js para que
+ * combine con el tema recién elegido. Las gráficas ya dibujadas no
+ * se repintan solas (Chart.defaults es una config global, no
+ * reactiva), pero como cada render() reconstruye sus charts desde
+ * cero, la próxima vez que se visite esa página ya sale con el
+ * tooltip correcto. */
+function reloadChartTooltipDefaults() {
+  if (window.Chart) {
+    window.Chart.defaults.plugins.tooltip = chartTooltipStyle();
+  }
 }
 
 /** Destruye y vuelve a inyectar el widget de TradingView con el
@@ -48,6 +62,16 @@ export function reloadEconCalWidget() {
   container.appendChild(script);
 }
 
+function updateThemeColorMeta() {
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) {
+    meta.setAttribute(
+      "content",
+      currentColorTheme() === "light" ? "#e5e7eb" : "#17191c",
+    );
+  }
+}
+
 /** Aplica el tema guardado al cargar la página. main.js la llama una vez al iniciar. */
 export function applySavedTheme() {
   const savedTheme = localStorage.getItem("theme");
@@ -57,6 +81,8 @@ export function applySavedTheme() {
     document.body.classList.remove("light");
   }
   reloadEconCalWidget();
+  reloadChartTooltipDefaults();
+  updateThemeColorMeta();
 }
 
 // [window] onclick="toggleTheme()" en el botón del sidebar
@@ -76,6 +102,8 @@ export function toggleTheme() {
   }
   localStorage.setItem("theme", isLight ? "light" : "dark");
   reloadEconCalWidget();
+  reloadChartTooltipDefaults();
+  updateThemeColorMeta();
 }
 
 /** Sincroniza el ícono del botón con el tema actual. Llamada desde init(). */
