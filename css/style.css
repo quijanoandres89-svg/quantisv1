@@ -231,7 +231,8 @@ body.light .logo-light-theme {
   outline: none;
   box-shadow: 0 0 0 3px var(--abg);
 }
-.theme-btn::after {
+.theme-btn::after,
+.session-close-btn::after {
   content: attr(data-tooltip);
   position: absolute;
   top: calc(100% + 8px);
@@ -247,12 +248,40 @@ body.light .logo-light-theme {
   transition: 0.18s;
   z-index: 9999;
 }
-.theme-btn:hover::after {
+.theme-btn:hover::after,
+.session-close-btn:hover::after {
   opacity: 1;
   visibility: visible;
   transform: translateX(-80%) translateY(-10px);
   background: var(--bg3);
   border: 1px solid var(--accbr);
+}
+.session-close-btn {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  color: var(--text2);
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    transform 0.15s;
+}
+.session-close-btn:hover {
+  background: var(--bg3);
+  color: var(--text);
+  transform: scale(1.06);
+}
+.session-close-btn .material-symbols-outlined {
+  font-size: 19px;
 }
 .nav {
   padding: 10px 8px;
@@ -2946,7 +2975,8 @@ select option {
    que solo aparezca navegando con teclado, no en cada click de mouse. */
 .btn:focus-visible,
 .ni:focus-visible,
-.ji:focus-visible {
+.ji:focus-visible,
+.session-close-btn:focus-visible {
   outline: 2px solid var(--acc);
   outline-offset: 2px;
 }
@@ -2968,4 +2998,34 @@ select option {
 .pager .btn:disabled {
   opacity: 0.35;
   cursor: default;
+}
+
+/* --- Buscador en píldora (Historial / Journals / EOD) ---
+   Misma idea de forma que una barra de búsqueda tipo Google (ícono
+   a la izquierda, bordes totalmente redondeados), pero con la
+   paleta oscura de Quantis en vez de blanco, para no romper con el
+   resto de la app. */
+.search-wrap {
+  position: relative;
+  max-width: 380px;
+  margin-bottom: 14px;
+}
+.search-wrap .material-symbols-outlined {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 18px;
+  color: var(--text3);
+  pointer-events: none;
+}
+.search-wrap input {
+  width: 100%;
+  padding: 10px 14px 10px 42px;
+  border-radius: 999px;
+  background: var(--bg2);
+  font-size: 13px;
+}
+.search-wrap input:focus {
+  background: var(--bg3);
 }
