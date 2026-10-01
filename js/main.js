@@ -38,6 +38,7 @@ import { toggleSidebar, closeSidebar } from "./modules/mobile.js";
 import * as SettingsPanel from "./modules/settingsPanel.js";
 import * as Instruments from "./modules/instruments.js";
 import * as Eod from "./modules/eod.js";
+import { chartTooltipStyle } from "./modules/utils.js";
 import * as Auth from "./modules/auth.js";
 
 /**
@@ -152,11 +153,13 @@ Object.assign(window, {
   setScore: JournalManager.setScore,
   saveJournal: JournalManager.saveJournal,
   toggleJ: JournalManager.toggleJ,
+  changeJournalsPage: JournalManager.changeJournalsPage,
   toggleFallo: JournalManager.toggleFallo,
   toggleEmergente: JournalManager.toggleEmergente,
   toggleJPhase: JournalManager.toggleJPhase,
   // historial
   renderHistorial: Historial.renderHistorial,
+  changeHistorialPage: Historial.changeHistorialPage,
   // calculator
   calcSlFromPrices: Calculator.calcSlFromPrices,
   calcLote: Calculator.calcLote,
@@ -217,6 +220,8 @@ Object.assign(window, {
   saveEod: Eod.saveEod,
   verImagenesEod: Eod.verImagenesEod,
   toggleEod: Eod.toggleEod,
+  changeEodPage: Eod.changeEodPage,
+  renderEodList: Eod.renderEodList,
 });
 
 // --- Chart.js: animación de entrada global ---
@@ -240,6 +245,7 @@ if (window.Chart) {
             ? ctx.dataIndex * 18 + ctx.datasetIndex * 60
             : 0,
       };
+  window.Chart.defaults.plugins.tooltip = chartTooltipStyle();
 }
 
 // --- Arranque ---
@@ -247,3 +253,14 @@ Theme.applySavedTheme(); // antes: IIFE de tema al cargar script.js
 IZ.initPasteHandler(); // listener de pegar (Ctrl+V) en el formulario de registro
 Backup.initBackupMenuAutoClose(); // cierra el menú de 3 puntos del panel de backups al hacer click afuera
 init();
+
+// --- PWA: registra el service worker (app shell cacheado, instalable) ---
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch(() => {
+      // Si falla (ej. abierto por file:// en vez de http(s)), la app
+      // sigue funcionando normal — el service worker es una mejora,
+      // no una dependencia.
+    });
+  });
+}
