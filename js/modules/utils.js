@@ -259,3 +259,57 @@ export function animateCountUp(el, endValue, opts = {}) {
   }
   requestAnimationFrame(tick);
 }
+
+/** Estilo compartido para los tooltips de Chart.js. Antes estaba
+ * duplicado a mano (o ausente, cayendo al tooltip blanco por
+ * defecto de Chart.js incluso en modo oscuro) en 7 gráficas
+ * distintas repartidas en 3 módulos. Se aplica una sola vez como
+ * Chart.defaults.plugins.tooltip (ver main.js) y se vuelve a llamar
+ * al cambiar de tema (ver theme.js) — los `callbacks` de cada
+ * gráfica (título/label específicos) se definen aparte y Chart.js
+ * los combina con este estilo automáticamente. */
+export function chartTooltipStyle() {
+  const light = document.body.classList.contains("light");
+  return {
+    backgroundColor: light ? "#ffffff" : "#0d0f14",
+    titleColor: light ? "#131722" : "#e5e7eb",
+    titleFont: { size: 11, weight: "600" },
+    bodyColor: light ? "#131722" : "#e5e7eb",
+    bodyFont: { size: 11 },
+    padding: 10,
+    cornerRadius: 8,
+    displayColors: true,
+    boxWidth: 8,
+    boxHeight: 8,
+    boxPadding: 4,
+    borderColor: light ? "rgba(0,0,0,.08)" : "rgba(255,255,255,.08)",
+    borderWidth: 1,
+  };
+}
+
+/** Paginación genérica para listas largas (Historial, Journals,
+ * EOD). Solo corta el array ya filtrado/ordenado — no cambia qué se
+ * muestra, cuánto se pinta de una sola vez en el DOM. */
+export function paginate(items, page, pageSize) {
+  const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
+  const safePage = Math.min(Math.max(1, page), totalPages);
+  const start = (safePage - 1) * pageSize;
+  return {
+    items: items.slice(start, start + pageSize),
+    page: safePage,
+    totalPages,
+    total: items.length,
+  };
+}
+
+/** HTML del control Anterior/Siguiente. `prevCall`/`nextCall` son
+ * llamadas ya listas para el onclick (ej. "changeHistorialPage(-1)"),
+ * apuntando a funciones expuestas en window. */
+export function paginationControlsHTML(page, totalPages, prevCall, nextCall) {
+  if (totalPages <= 1) return "";
+  return `<div class="pager">
+    <button class="btn btn-sm" ${page <= 1 ? "disabled" : ""} onclick="${prevCall}">‹ Anterior</button>
+    <span class="pager-label">Página ${page} de ${totalPages}</span>
+    <button class="btn btn-sm" ${page >= totalPages ? "disabled" : ""} onclick="${nextCall}">Siguiente ›</button>
+  </div>`;
+}
