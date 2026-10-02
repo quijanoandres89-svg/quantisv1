@@ -39,6 +39,8 @@ import * as SettingsPanel from "./modules/settingsPanel.js";
 import * as Instruments from "./modules/instruments.js";
 import * as Eod from "./modules/eod.js";
 import { chartTooltipStyle } from "./modules/utils.js";
+import * as Admin from "./modules/admin.js";
+import * as Rooms from "./modules/rooms.js";
 import * as Auth from "./modules/auth.js";
 
 /**
@@ -65,6 +67,8 @@ function go(page, el) {
   if (page === "historial") Historial.renderHistorial();
   if (page === "journals") JournalManager.renderJournals();
   if (page === "eod") Eod.renderEod();
+  if (page === "admin") Admin.renderAdmin();
+  if (page === "salas") Rooms.renderRooms();
   if (page === "stats") Statistics.renderStats();
   if (page === "journal") JournalManager.initJournal();
   if (page === "reporte") Statistics.renderReporte();
@@ -87,6 +91,7 @@ async function init() {
   const user = await Auth.requireSession();
   Auth.renderSessionInfo(user);
   Auth.startInactivityWatcher();
+  Admin.loadMyRole(); // muestra/oculta el nav de Administración según el rol
   Toast.showQueuedToast();
   await State.load();
   Instruments.renderAllInstrumentSelects();
@@ -222,6 +227,20 @@ Object.assign(window, {
   toggleEod: Eod.toggleEod,
   changeEodPage: Eod.changeEodPage,
   renderEodList: Eod.renderEodList,
+  // admin
+  searchUserByEmail: Admin.searchUserByEmail,
+  setUserRole: Admin.setUserRole,
+  // rooms (salas)
+  switchRoomsTab: Rooms.switchRoomsTab,
+  requestJoinRoom: Rooms.requestJoinRoom,
+  saveRoom: Rooms.saveRoom,
+  openRoom: Rooms.openRoom,
+  closeRoomDetail: Rooms.closeRoomDetail,
+  approveMember: Rooms.approveMember,
+  kickMember: Rooms.kickMember,
+  leaveRoom: Rooms.leaveRoom,
+  deleteRoom: Rooms.deleteRoom,
+  sendRoomMessage: Rooms.sendRoomMessage,
 });
 
 // --- Chart.js: animación de entrada global ---
