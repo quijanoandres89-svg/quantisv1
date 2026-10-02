@@ -292,6 +292,40 @@
       </div>
     </div>
 
+    <div class="modal-bg" id="modal-room">
+      <div class="modal">
+        <div class="modal-title">Nueva sala</div>
+        <div class="fg">
+          <label>Nombre de la sala</label
+          ><input
+            type="text"
+            id="room-nombre"
+            placeholder="Análisis EURUSD - Londres"
+          />
+        </div>
+        <div class="fg">
+          <label>Descripción (opcional)</label
+          ><textarea
+            id="room-desc"
+            placeholder="Revisión de gráficos y plan de trading para la sesión..."
+          ></textarea>
+        </div>
+        <div class="fg">
+          <label>Visibilidad</label
+          ><select id="room-visibilidad">
+            <option value="true">Pública (visible para todos)</option>
+            <option value="false">Privada (solo quien tú apruebes)</option>
+          </select>
+        </div>
+        <div style="display: flex; gap: 8px; margin-top: 6px">
+          <button class="btn btn-p" onclick="saveRoom()">Crear sala</button>
+          <button class="btn" onclick="closeModal('modal-room')">
+            Cancelar
+          </button>
+        </div>
+      </div>
+    </div>
+
     <div class="modal-bg" id="modal-preventive">
       <div class="modal">
         <div class="modal-title" style="color: var(--red)">
@@ -641,6 +675,36 @@
               <rect x="14" y="14" width="7" height="7" />
               <rect x="3" y="14" width="7" height="7" /></svg
             >Plantillas de setup
+          </button>
+          <div class="nav-sec">Comunidad</div>
+          <button class="ni" onclick="go('salas', this)">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+              <path d="M23 21v-2a4 4 0 00-3-3.87" />
+              <path d="M16 3.13a4 4 0 010 7.75" /></svg
+            >Salas
+          </button>
+          <button
+            class="ni"
+            id="nav-admin"
+            style="display: none"
+            onclick="go('admin', this)"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path d="M12 2a5 5 0 015 5v2a5 5 0 01-10 0V7a5 5 0 015-5z" />
+              <path d="M4 21c0-4 3.5-6 8-6s8 2 8 6" /></svg
+            >Administración
           </button>
         </div>
         <div class="sidebar-footer">
@@ -2504,6 +2568,65 @@
             + Nueva plantilla
           </button>
           <div id="plantillas-list"></div>
+        </div>
+
+        <!-- SALAS -->
+        <div class="page" id="page-salas">
+          <div class="pt">Salas</div>
+          <div class="ps">
+            Conéctate con otros traders de Quantis, comparte ideas y analiza
+            mercados juntos
+          </div>
+
+          <div id="salas-list-view">
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 14px;
+                flex-wrap: wrap;
+                gap: 10px;
+              "
+            >
+              <div id="rooms-tabs" style="display: flex; gap: 6px"></div>
+              <button
+                class="btn btn-p"
+                id="btn-nueva-sala"
+                style="display: none"
+                onclick="openModal('modal-room')"
+              >
+                + Nueva sala
+              </button>
+            </div>
+            <div id="salas-list"></div>
+          </div>
+
+          <div id="salas-detail-view" style="display: none">
+            <button class="btn btn-sm" onclick="closeRoomDetail()">
+              ‹ Volver
+            </button>
+            <div id="salas-detail-content"></div>
+          </div>
+        </div>
+
+        <!-- ADMINISTRACIÓN (solo superadmin) -->
+        <div class="page" id="page-admin">
+          <div class="pt">Administración</div>
+          <div class="ps">
+            Busca un usuario por correo y cambia su rol — solo visible para
+            superadmin
+          </div>
+          <div class="search-wrap">
+            <span class="material-symbols-outlined">search</span>
+            <input
+              type="text"
+              id="admin-search-email"
+              placeholder="Buscar por correo..."
+              oninput="searchUserByEmail()"
+            />
+          </div>
+          <div id="admin-search-result"></div>
         </div>
       </main>
     </div>
