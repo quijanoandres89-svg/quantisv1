@@ -9,12 +9,12 @@
    RLS del lado de Supabase; este módulo solo pide datos y confía
    en que el servidor rechace lo que no corresponda.
 
-   Nota de alcance: el conteo de participantes de una sala solo se
-   ve preciso en "Mis salas" (donde sos admin o ya estás aprobado);
-   para salas públicas en las que todavía no entraste, RLS no te
-   deja ver las filas de room_members de otra gente, así que no se
-   muestra un conteo (mostrar un número inventado sería peor que no
-   mostrar nada).
+   El conteo de participantes (badge "N participantes" en cada
+   tarjeta) viene de get_room_approved_counts(), una función aparte
+   que SOLO expone el número — no quiénes son. Así "Salas públicas"
+   puede mostrar el conteo real incluso en salas a las que todavía
+   no perteneces, sin exponer la lista de miembros de otra gente
+   (eso sí sigue protegido por RLS normal).
    ============================================================ */
 
 import { getSupabase, getCurrentUser } from "./supabaseClient.js";
@@ -30,6 +30,7 @@ let allMembers = []; // todas las filas de room_members visibles para mí (RLS)
 let profilesCache = new Map(); // id -> {display_name, email}
 let currentRoom = null;
 let messagesChannel = null;
+let approvedCounts = new Map(); // room_id -> número de aprobados (público, sin exponer quiénes)
 
 const TABS = [
   { id: "mias", label: "Mis salas" },
@@ -90,9 +91,10 @@ export function switchRoomsTab(tab) {
 
 async function loadRoomsData() {
   const supabase = await getSupabase();
-  const [roomsRes, membersRes] = await Promise.all([
+  const [roomsRes, membersRes, countsRes] = await Promise.all([
     supabase.from("rooms").select("*").order("created_at", { ascending: false }),
     supabase.from("room_members").select("*"),
+    supabase.rpc("get_room_approved_counts"),
   ]);
   if (roomsRes.error) {
     console.error("QUANTIS: error cargando rooms:", roomsRes.error);
@@ -102,8 +104,12 @@ async function loadRoomsData() {
     console.error("QUANTIS: error cargando room_members:", membersRes.error);
     showToast("error", "No se pudieron cargar las membresías", membersRes.error.message);
   }
+  if (countsRes.error) {
+    console.error("QUANTIS: error cargando conteos de salas:", countsRes.error);
+  }
   allRooms = roomsRes.data || [];
   allMembers = membersRes.data || [];
+  approvedCounts = new Map((countsRes.data || []).map((c) => [c.room_id, c.approved_count]));
   await ensureProfiles(allRooms.map((r) => r.created_by));
 }
 
@@ -112,8 +118,7 @@ function myStatusFor(roomId) {
 }
 
 function approvedCountFor(roomId) {
-  // Solo exacto si soy admin de la sala o ya estoy aprobado ahí (ver nota de alcance arriba)
-  return allMembers.filter((m) => m.room_id === roomId && m.status === "approved").length;
+  return approvedCounts.get(roomId) || 0;
 }
 
 function pendingCountFor(roomId) {
@@ -140,7 +145,7 @@ function roomCardHTML(r) {
   return `<div class="ji" style="cursor:default">
     <div class="jh">
       <div class="jdate">${escapeHTML(r.name)}${!r.is_public ? ' <span class="badge binf">Privada</span>' : ""}</div>
-      ${isOwner || status === "approved" ? `<span class="badge binf">${approved} participante${approved === 1 ? "" : "s"}</span>` : ""}
+      <span class="badge binf">${approved} participante${approved === 1 ? "" : "s"}</span>
     </div>
     ${r.description ? `<div class="jprev">${escapeHTML(r.description)}</div>` : ""}
     <div style="font-size:11px;color:var(--text3);font-family:var(--mono);margin:4px 0 8px">
