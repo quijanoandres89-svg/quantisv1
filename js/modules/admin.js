@@ -56,10 +56,9 @@ export function getMyRole() {
 
 // [window] go('admin', ...) la dispara desde main.js
 export function renderAdmin() {
-  const el = document.getElementById("admin-search-result");
-  if (el) el.innerHTML = "";
   const input = document.getElementById("admin-search-email");
   if (input) input.value = "";
+  searchUserByEmail(); // sin texto en el buscador, esto trae TODOS los usuarios
 }
 
 function roleButtonsHTML(profile) {
@@ -76,21 +75,20 @@ export async function searchUserByEmail() {
   const query = (document.getElementById("admin-search-email")?.value || "").trim();
   const resultEl = document.getElementById("admin-search-result");
   if (!resultEl) return;
-  if (!query) {
-    resultEl.innerHTML = "";
-    return;
-  }
   try {
     const supabase = await getSupabase();
-    const { data, error } = await supabase
+    let req = supabase
       .from("profiles")
       .select("id, email, display_name, role")
-      .ilike("email", `%${query}%`)
       .order("email")
-      .limit(15);
+      .limit(100);
+    if (query) req = req.ilike("email", `%${query}%`);
+    const { data, error } = await req;
     if (error) throw error;
     if (!data.length) {
-      resultEl.innerHTML = `<div class="empty">Sin usuarios que coincidan con ese correo</div>`;
+      resultEl.innerHTML = query
+        ? `<div class="empty">Sin usuarios que coincidan con ese correo</div>`
+        : `<div class="empty">Todavía no hay usuarios registrados</div>`;
       return;
     }
     resultEl.innerHTML = data
