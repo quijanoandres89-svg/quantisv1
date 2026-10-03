@@ -94,6 +94,14 @@ async function loadRoomsData() {
     supabase.from("rooms").select("*").order("created_at", { ascending: false }),
     supabase.from("room_members").select("*"),
   ]);
+  if (roomsRes.error) {
+    console.error("QUANTIS: error cargando rooms:", roomsRes.error);
+    showToast("error", "No se pudieron cargar las salas", roomsRes.error.message);
+  }
+  if (membersRes.error) {
+    console.error("QUANTIS: error cargando room_members:", membersRes.error);
+    showToast("error", "No se pudieron cargar las membresías", membersRes.error.message);
+  }
   allRooms = roomsRes.data || [];
   allMembers = membersRes.data || [];
   await ensureProfiles(allRooms.map((r) => r.created_by));
