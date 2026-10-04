@@ -141,11 +141,19 @@ export async function logout() {
 
 /** Pinta el nombre del usuario logueado + botón de cerrar sesión al
  * final del sidebar. Llamar una vez ya con sesión activa. */
-export function renderSessionInfo(user, containerId = "sidebar-session") {
+let lastEmailFallback = null;
+
+/** displayName es opcional a propósito: al arrancar la app todavía
+ * no se cargó el perfil (ver admin.js → loadMyRole, que corre en
+ * paralelo, sin await), así que esto pinta el correo primero sin
+ * esperar a nadie, y updateSessionDisplayName() lo reemplaza por el
+ * nombre real en cuanto el perfil termina de cargar. */
+export function renderSessionInfo(user, displayName, containerId = "sidebar-session") {
   const container = document.getElementById(containerId);
   if (!container || !user) return;
+  lastEmailFallback = user.email || "Usuario";
 
-  const label = user.email || "Usuario";
+  const label = displayName || lastEmailFallback;
   const initial = label.trim().charAt(0).toUpperCase() || "?";
 
   container.innerHTML = `
@@ -157,6 +165,20 @@ export function renderSessionInfo(user, containerId = "sidebar-session") {
       <span class="material-symbols-outlined">logout</span>
     </button>
   `;
+}
+
+/** Actualiza en el sitio el nombre mostrado en el pie del sidebar,
+ * sin reconstruir todo el bloque. La llama main.js apenas carga el
+ * perfil (admin.js → loadMyRole), y settingsPanel.js justo después
+ * de guardar un nombre nuevo. */
+export function updateSessionDisplayName(name) {
+  const label = name || lastEmailFallback || "Usuario";
+  const nameEl = document.querySelector(".sidebar-session-name");
+  const avatarEl = document.querySelector(".sidebar-session-avatar");
+  const wrapEl = document.querySelector(".sidebar-session-user");
+  if (nameEl) nameEl.textContent = label;
+  if (avatarEl) avatarEl.textContent = label.trim().charAt(0).toUpperCase() || "?";
+  if (wrapEl) wrapEl.setAttribute("data-tooltip", label);
 }
 
 /* ============================================================
