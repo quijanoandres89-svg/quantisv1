@@ -26,6 +26,8 @@ import * as Backup from "./backup.js";
 import * as ImageStore from "./imageStore.js";
 import { queueToastAfterReload } from "./toast.js";
 import * as Instruments from "./instruments.js";
+import { getMyProfile, saveMyDisplayName, ROLE_LABEL } from "./admin.js";
+import { updateSessionDisplayName } from "./auth.js";
 
 let activeSectionId = null;
 let escListenerAttached = false;
@@ -172,34 +174,44 @@ function renderExportSection(container) {
 /* ------------------------------------------------------------
    SECCIÓN: Perfil
    ------------------------------------------------------------
-   QUANTIS no tiene backend ni autenticación (app 100% local, un
-   solo usuario, un solo navegador — ver auditoría), así que no
-   existe ningún dato de "usuario" real que mostrar todavía. Los
-   campos quedan deshabilitados con "Próximamente" en vez de
-   simular una identidad que no existe.
+   Datos reales de public.profiles (ver supabase_salas_setup.sql):
+   Nombre es lo único editable, y pasa por update_my_display_name()
+   — una función que SOLO puede tocar tu propio display_name, nunca
+   tu rol. Correo y Rol son de solo lectura (el rol lo administra el
+   superadmin desde Administración, y se refleja acá solo si lo
+   cambian mientras tienes esta sección abierta — ver
+   refreshOpenProfileSection() en admin.js).
    ------------------------------------------------------------ */
 function renderProfileSection(container) {
+  const p = getMyProfile();
+  const initial = (p?.display_name || p?.email || "?").charAt(0).toUpperCase();
   container.innerHTML = `
     <div class="settings-section-title">Perfil</div>
     <div class="settings-section-sub">Personalización de tu cuenta en QUANTIS.</div>
-    <div class="settings-avatar">QT</div>
-    <div class="alert ai" style="margin-bottom:16px">
-      QUANTIS funciona 100% en este navegador, sin cuentas ni servidor —
-      todavía no hay un perfil real que editar. Estos campos quedan listos
-      para cuando esa parte se construya.
+    <div class="settings-avatar">${initial}</div>
+    <div class="fg">
+      <label>Nombre</label>
+      <div style="display:flex;gap:8px">
+        <input type="text" id="profile-name-input" value="${(p?.display_name || "").replace(/"/g, "&quot;")}" placeholder="Tu nombre" style="flex:1" />
+        <button class="btn btn-p btn-sm" onclick="saveProfileName()">Guardar</button>
+      </div>
     </div>
     <div class="fg settings-field-disabled">
-      <label>Nombre <span class="settings-soon-badge">Próximamente</span></label>
-      <input type="text" disabled placeholder="Tu nombre" />
+      <label>Correo</label>
+      <input type="email" disabled value="${p?.email || ""}" />
     </div>
     <div class="fg settings-field-disabled">
-      <label>Correo <span class="settings-soon-badge">Próximamente</span></label>
-      <input type="email" disabled placeholder="tucorreo@ejemplo.com" />
-    </div>
-    <div class="fg settings-field-disabled">
-      <label>Rol <span class="settings-soon-badge">Próximamente</span></label>
-      <input type="text" disabled placeholder="Trader" />
+      <label>Rol</label>
+      <input type="text" id="profile-role-display" disabled value="${ROLE_LABEL[p?.role] || p?.role || ""}" />
     </div>`;
+}
+
+// [window] onclick="saveProfileName()" en Configuración → Perfil
+export async function saveProfileName() {
+  const input = document.getElementById("profile-name-input");
+  if (!input) return;
+  const ok = await saveMyDisplayName(input.value);
+  if (ok) updateSessionDisplayName(input.value.trim());
 }
 
 /* ------------------------------------------------------------
