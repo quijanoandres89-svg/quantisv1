@@ -20,7 +20,7 @@
 import { getSupabase, getCurrentUser } from "./supabaseClient.js";
 import { escapeHTML, fmtDate } from "./utils.js";
 import { showToast } from "./toast.js";
-import { getMyRole } from "./admin.js";
+import { getMyRole, getMyProfile } from "./admin.js";
 import { closeModal } from "./challengeManager.js";
 
 let myUserId = null;
@@ -31,6 +31,7 @@ let profilesCache = new Map(); // id -> {display_name, email}
 let currentRoom = null;
 let messagesChannel = null;
 let approvedCounts = new Map(); // room_id -> número de aprobados (público, sin exponer quiénes)
+let dailyCallFrame = null; // instancia activa de DailyIframe, si hay una llamada en curso
 
 const TABS = [
   { id: "mias", label: "Mis salas" },
@@ -299,6 +300,17 @@ function renderRoomDetail(room, members, isOwner, myStatus) {
       <button class="btn btn-d btn-sm" onclick="deleteRoom('${room.id}')">Eliminar sala</button>`;
   }
 
+  const callHTML =
+    isOwner || myStatus === "approved"
+      ? `<div class="card">
+        <div class="ct">Audio y pantalla</div>
+        <div id="room-daily-container" style="border-radius:var(--rs);overflow:hidden;display:none"></div>
+        <div id="room-daily-controls">
+          <button class="btn btn-p btn-sm" onclick="startAudioCall('${room.id}')">🎙 Unirse al audio</button>
+        </div>
+      </div>`
+      : "";
+
   const chatHTML =
     isOwner || myStatus === "approved"
       ? `<div class="card">
@@ -324,11 +336,75 @@ function renderRoomDetail(room, members, isOwner, myStatus) {
     ${room.description ? `<div class="jprev" style="margin-bottom:14px">${escapeHTML(room.description)}</div>` : ""}
     ${leaveBtn}
     ${adminHTML}
+    ${callHTML}
     ${chatHTML}`;
+}
+
+/* ---------------- Audio y pantalla (Daily.co) ---------------- */
+
+// [window] onclick="startAudioCall('roomId')"
+export async function startAudioCall(roomId) {
+  if (!window.DailyIframe) {
+    showToast("error", "No se pudo cargar el audio", "El SDK de Daily no cargó — revisa tu conexión y recarga la página.");
+    return;
+  }
+  const controls = document.getElementById("room-daily-controls");
+  const container = document.getElementById("room-daily-container");
+  if (controls) controls.innerHTML = `<div class="empty" style="padding:10px">Conectando…</div>`;
+
+  try {
+    const supabase = await getSupabase();
+    const { data, error } = await supabase.functions.invoke("create-daily-room", {
+      body: { room_id: roomId },
+    });
+    if (error) throw error;
+    if (data?.error) throw new Error(data.error);
+
+    container.style.display = "block";
+    container.style.height = "480px";
+    dailyCallFrame = window.DailyIframe.createFrame(container, {
+      showLeaveButton: false,
+      iframeStyle: { width: "100%", height: "100%", border: "0" },
+    });
+    const profile = getMyProfile();
+    await dailyCallFrame.join({
+      url: data.url,
+      userName: profile?.display_name || profile?.email || "Trader",
+      startVideoOff: true,
+    });
+
+    if (controls) {
+      controls.innerHTML = `<button class="btn btn-d btn-sm" onclick="leaveAudioCall()">Salir del audio</button>`;
+    }
+  } catch (e) {
+    showToast("error", "No se pudo iniciar el audio", e.message);
+    if (controls) {
+      controls.innerHTML = `<button class="btn btn-p btn-sm" onclick="startAudioCall('${roomId}')">🎙 Unirse al audio</button>`;
+    }
+  }
+}
+
+// [window] onclick="leaveAudioCall()"
+export function leaveAudioCall() {
+  if (dailyCallFrame) {
+    dailyCallFrame.leave();
+    dailyCallFrame.destroy();
+    dailyCallFrame = null;
+  }
+  const container = document.getElementById("room-daily-container");
+  const controls = document.getElementById("room-daily-controls");
+  if (container) {
+    container.style.display = "none";
+    container.innerHTML = "";
+  }
+  if (controls && currentRoom) {
+    controls.innerHTML = `<button class="btn btn-p btn-sm" onclick="startAudioCall('${currentRoom.id}')">🎙 Unirse al audio</button>`;
+  }
 }
 
 // [window] onclick="closeRoomDetail()"
 export function closeRoomDetail() {
+  leaveAudioCall();
   if (messagesChannel) {
     messagesChannel.unsubscribe();
     messagesChannel = null;
