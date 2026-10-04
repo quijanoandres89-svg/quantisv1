@@ -91,7 +91,12 @@ async function init() {
   const user = await Auth.requireSession();
   Auth.renderSessionInfo(user);
   Auth.startInactivityWatcher();
-  Admin.loadMyRole(); // muestra/oculta el nav de Administración según el rol
+  // No se espera (await) para no retrasar el resto del arranque —
+  // en cuanto resuelve, reemplaza el correo por el nombre real.
+  Admin.loadMyRole().then(() => {
+    const p = Admin.getMyProfile();
+    if (p?.display_name) Auth.updateSessionDisplayName(p.display_name);
+  });
   Toast.showQueuedToast();
   await State.load();
   Instruments.renderAllInstrumentSelects();
@@ -215,6 +220,7 @@ Object.assign(window, {
   selectSettingsSection: SettingsPanel.selectSettingsSection,
   toggleResetButton: SettingsPanel.toggleResetButton,
   confirmResetQuantis: SettingsPanel.confirmResetQuantis,
+  saveProfileName: SettingsPanel.saveProfileName,
   // instruments (pares configurables)
   openInstrumentForm: Instruments.openInstrumentForm,
   closeInstrumentForm: Instruments.closeInstrumentForm,
