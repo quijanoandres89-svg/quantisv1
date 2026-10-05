@@ -249,6 +249,8 @@ Object.assign(window, {
   sendRoomMessage: Rooms.sendRoomMessage,
   startAudioCall: Rooms.startAudioCall,
   leaveAudioCall: Rooms.leaveAudioCall,
+  toggleMute: Rooms.toggleMute,
+  toggleScreenShare: Rooms.toggleScreenShare,
 });
 
 // --- Chart.js: animación de entrada global ---
