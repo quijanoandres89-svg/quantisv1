@@ -20,7 +20,7 @@
 import { getSupabase, getCurrentUser } from "./supabaseClient.js";
 import { escapeHTML, fmtDate } from "./utils.js";
 import { showToast } from "./toast.js";
-import { getMyRole, getMyProfile } from "./admin.js";
+import { getMyRole } from "./admin.js";
 import { closeModal } from "./challengeManager.js";
 
 let myUserId = null;
@@ -31,7 +31,7 @@ let profilesCache = new Map(); // id -> {display_name, email}
 let currentRoom = null;
 let messagesChannel = null;
 let approvedCounts = new Map(); // room_id -> número de aprobados (público, sin exponer quiénes)
-let dailyCallFrame = null; // instancia activa de DailyIframe, si hay una llamada en curso
+let lkRoom = null; // instancia activa de LivekitClient.Room, si hay una llamada en curso
 
 const TABS = [
   { id: "mias", label: "Mis salas" },
@@ -340,12 +340,33 @@ function renderRoomDetail(room, members, isOwner, myStatus) {
     ${chatHTML}`;
 }
 
-/* ---------------- Audio y pantalla (Daily.co) ---------------- */
+/* ---------------- Audio y pantalla (LiveKit) ----------------
+   Sin interfaz prearmada (a diferencia de Daily) — este bloque
+   arma a mano: conectar, publicar el micrófono, escuchar pistas
+   remotas (audio de otros + video si alguien comparte pantalla), y
+   los 3 controles (silenciar, compartir pantalla, salir). */
+
+function renderCallControls(roomId, active) {
+  const controls = document.getElementById("room-daily-controls");
+  if (!controls) return;
+  if (!active) {
+    controls.innerHTML = `<button class="btn btn-p btn-sm" onclick="startAudioCall('${roomId}')">🎙 Unirse al audio</button>`;
+    return;
+  }
+  const muted = !lkRoom?.localParticipant?.isMicrophoneEnabled;
+  const sharing = !!lkRoom?.localParticipant?.isScreenShareEnabled;
+  controls.innerHTML = `
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <button class="btn btn-sm" onclick="toggleMute()">${muted ? "🔇 Activar mic" : "🎙 Silenciar"}</button>
+      <button class="btn btn-sm ${sharing ? "btn-p" : ""}" onclick="toggleScreenShare()">${sharing ? "🖥 Dejar de compartir" : "🖥 Compartir pantalla"}</button>
+      <button class="btn btn-d btn-sm" onclick="leaveAudioCall()">Salir del audio</button>
+    </div>`;
+}
 
 // [window] onclick="startAudioCall('roomId')"
 export async function startAudioCall(roomId) {
-  if (!window.DailyIframe) {
-    showToast("error", "No se pudo cargar el audio", "El SDK de Daily no cargó — revisa tu conexión y recarga la página.");
+  if (!window.LivekitClient) {
+    showToast("error", "No se pudo cargar el audio", "El SDK de LiveKit no cargó — revisa tu conexión y recarga la página.");
     return;
   }
   const controls = document.getElementById("room-daily-controls");
@@ -354,52 +375,75 @@ export async function startAudioCall(roomId) {
 
   try {
     const supabase = await getSupabase();
-    const { data, error } = await supabase.functions.invoke("create-daily-room", {
+    const { data, error } = await supabase.functions.invoke("create-livekit-token", {
       body: { room_id: roomId },
     });
     if (error) throw error;
     if (data?.error) throw new Error(data.error);
 
-    container.style.display = "block";
-    container.style.height = "480px";
-    dailyCallFrame = window.DailyIframe.createFrame(container, {
-      showLeaveButton: false,
-      iframeStyle: { width: "100%", height: "100%", border: "0" },
-    });
-    const profile = getMyProfile();
-    await dailyCallFrame.join({
-      url: data.url,
-      userName: profile?.display_name || profile?.email || "Trader",
-      startVideoOff: true,
-    });
+    const { Room, RoomEvent, Track } = window.LivekitClient;
+    lkRoom = new Room();
 
-    if (controls) {
-      controls.innerHTML = `<button class="btn btn-d btn-sm" onclick="leaveAudioCall()">Salir del audio</button>`;
-    }
+    lkRoom.on(RoomEvent.TrackSubscribed, (track) => {
+      if (track.kind === Track.Kind.Audio || track.kind === Track.Kind.Video) {
+        const el = track.attach();
+        if (track.kind === Track.Kind.Video) {
+          el.style.width = "100%";
+          el.style.borderRadius = "var(--rs)";
+          el.style.marginTop = "8px";
+        }
+        container.appendChild(el);
+      }
+    });
+    lkRoom.on(RoomEvent.TrackUnsubscribed, (track) => {
+      track.detach().forEach((el) => el.remove());
+    });
+    lkRoom.on(RoomEvent.Disconnected, () => leaveAudioCall());
+
+    container.style.display = "block";
+    await lkRoom.connect(data.url, data.token);
+    await lkRoom.localParticipant.setMicrophoneEnabled(true);
+
+    renderCallControls(roomId, true);
   } catch (e) {
     showToast("error", "No se pudo iniciar el audio", e.message);
-    if (controls) {
-      controls.innerHTML = `<button class="btn btn-p btn-sm" onclick="startAudioCall('${roomId}')">🎙 Unirse al audio</button>`;
-    }
+    renderCallControls(roomId, false);
+  }
+}
+
+// [window] onclick="toggleMute()"
+export async function toggleMute() {
+  if (!lkRoom || !currentRoom) return;
+  const enabled = lkRoom.localParticipant.isMicrophoneEnabled;
+  await lkRoom.localParticipant.setMicrophoneEnabled(!enabled);
+  renderCallControls(currentRoom.id, true);
+}
+
+// [window] onclick="toggleScreenShare()"
+export async function toggleScreenShare() {
+  if (!lkRoom || !currentRoom) return;
+  try {
+    const sharing = lkRoom.localParticipant.isScreenShareEnabled;
+    await lkRoom.localParticipant.setScreenShareEnabled(!sharing);
+    renderCallControls(currentRoom.id, true);
+  } catch (e) {
+    // El usuario cancela el picker de "qué pantalla compartir" también cae acá — no es un error real.
+    if (e.name !== "NotAllowedError") showToast("error", "No se pudo compartir pantalla", e.message);
   }
 }
 
 // [window] onclick="leaveAudioCall()"
 export function leaveAudioCall() {
-  if (dailyCallFrame) {
-    dailyCallFrame.leave();
-    dailyCallFrame.destroy();
-    dailyCallFrame = null;
+  if (lkRoom) {
+    lkRoom.disconnect();
+    lkRoom = null;
   }
   const container = document.getElementById("room-daily-container");
-  const controls = document.getElementById("room-daily-controls");
   if (container) {
     container.style.display = "none";
     container.innerHTML = "";
   }
-  if (controls && currentRoom) {
-    controls.innerHTML = `<button class="btn btn-p btn-sm" onclick="startAudioCall('${currentRoom.id}')">🎙 Unirse al audio</button>`;
-  }
+  if (currentRoom) renderCallControls(currentRoom.id, false);
 }
 
 // [window] onclick="closeRoomDetail()"
