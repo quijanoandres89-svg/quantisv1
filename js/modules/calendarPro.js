@@ -198,7 +198,7 @@ export function renderCalendarPro() {
       if (usdVals.length) {
         const netUSD = usdVals.reduce((a, v) => a + v, 0);
         inner += `
-          <div class="cal-daycount">${dayTrades.length} <span class="cal-swap">&#8646;</span></div>
+          <div class="cal-daycount">${dayTrades.length} <span class="material-symbols-outlined cal-swap">swap_horiz</span></div>
           <div class="cal-daypnl" style="color:${netUSD >= 0 ? "var(--green)" : "var(--red)"}">${netUSD >= 0 ? "+" : ""}$${Math.abs(netUSD) >= 1000 ? (netUSD / 1000).toFixed(1) + "k" : netUSD.toFixed(2)}</div>`;
       } else {
         inner += `<div class="cal-daycount">${dayTrades.length} trade(s)</div>`;
