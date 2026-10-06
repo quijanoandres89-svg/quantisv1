@@ -86,7 +86,7 @@ export async function verImagenes(id) {
   const overlay = document.createElement("div");
   overlay.style.cssText =
     "position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:1000;display:flex;flex-direction:column;padding:20px;cursor:pointer;align-items:center;justify-content:center";
-  overlay.innerHTML = `<div style="color:#888;font-size:12px;font-family:var(--mono)">Cargando capturas…</div>`;
+  overlay.innerHTML = `<div class="loading-row" style="color:#ccc"><span class="spinner"></span> Cargando capturas…</div>`;
   overlay.onclick = (e) => {
     if (e.target === overlay) document.body.removeChild(overlay);
   };
