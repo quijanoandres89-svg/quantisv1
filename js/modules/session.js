@@ -15,6 +15,10 @@ import { today } from "./utils.js";
 import { getSem } from "./dashboard.js";
 import { updateCL } from "./journalManager.js";
 
+
+const FRENO_START_HTML =
+  '<span class="material-symbols-outlined ico">play_arrow</span> Iniciar Freno de 5 Minutos';
+
 // [window] onclick="activarSesion()" (desde el badge de semáforo del sidebar)
 export function activarSesion() {
   const overlay = document.getElementById("session-overlay");
@@ -46,8 +50,7 @@ export function cerrarSesion() {
   document.getElementById("session-timer").textContent = "5:00";
   document.getElementById("session-bar").style.width = "0%";
   document.getElementById("session-freno-btn").classList.remove("running");
-  document.getElementById("session-freno-btn").textContent =
-    "▶ Iniciar Freno de 5 Minutos";
+  document.getElementById("session-freno-btn").innerHTML = FRENO_START_HTML;
   document.getElementById("session-freno-msg").innerHTML = "";
 }
 
@@ -71,8 +74,7 @@ export function toggleSessionFreno() {
     clearInterval(sessionFrenoTimer);
     setSessionFrenoTimer(null);
     document.getElementById("session-freno-btn").classList.remove("running");
-    document.getElementById("session-freno-btn").textContent =
-      "▶ Iniciar Freno de 5 Minutos";
+    document.getElementById("session-freno-btn").innerHTML = FRENO_START_HTML;
     document.getElementById("session-timer").textContent = "5:00";
     document.getElementById("session-bar").style.width = "0%";
     return;
@@ -80,7 +82,8 @@ export function toggleSessionFreno() {
   const start = Date.now(),
     DUR = 300000;
   document.getElementById("session-freno-btn").classList.add("running");
-  document.getElementById("session-freno-btn").textContent = "⏸ Cancelar";
+  document.getElementById("session-freno-btn").innerHTML =
+    '<span class="material-symbols-outlined ico">close</span> Cancelar';
   setSessionFrenoTimer(
     setInterval(() => {
       const el = Date.now() - start,
@@ -97,8 +100,7 @@ export function toggleSessionFreno() {
         document
           .getElementById("session-freno-btn")
           .classList.remove("running");
-        document.getElementById("session-freno-btn").textContent =
-          "▶ Iniciar Freno de 5 Minutos";
+        document.getElementById("session-freno-btn").innerHTML = FRENO_START_HTML;
         document.getElementById("session-bar").style.width = "100%";
         document.getElementById("session-timer").textContent = "0:00";
         const entry = {
@@ -125,7 +127,7 @@ export function toggleSessionFreno() {
           osc.stop(ctx.currentTime + 0.6);
         } catch (e) {}
         document.getElementById("session-freno-msg").innerHTML =
-          `<div class="alert as">✅ Completado. ¿El setup sigue siendo válido?</div>`;
+          `<div class="alert as"><span class="material-symbols-outlined ico">check_circle</span> Completado. ¿El setup sigue siendo válido?</div>`;
         preChecks["c7"] = true;
         const c7el = document.getElementById("scl-c7");
         if (c7el) c7el.checked = true;
