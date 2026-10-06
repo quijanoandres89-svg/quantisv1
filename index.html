@@ -330,7 +330,7 @@
     <div class="modal-bg" id="modal-preventive">
       <div class="modal">
         <div class="modal-title" style="color: var(--red)">
-          ⛔ Este trade rompería una regla de tu Challenge
+          <span class="material-symbols-outlined ico">block</span> Este trade rompería una regla de tu Challenge
         </div>
         <div style="font-size: 12px; color: var(--text3); margin-bottom: 10px">
           Si guardas este trade tal como está, las siguientes reglas pasarían de
@@ -364,7 +364,7 @@
             onclick="closeSettings()"
             aria-label="Cerrar configuración"
           >
-            ✕
+            <span class="material-symbols-outlined">close</span>
           </button>
         </div>
         <div class="settings-modal-body">
@@ -767,7 +767,7 @@
                 id="session-freno-btn"
                 onclick="toggleSessionFreno()"
               >
-                ▶ Iniciar Freno de 5 Minutos
+                <span class="material-symbols-outlined ico">play_arrow</span> Iniciar Freno de 5 Minutos
               </button>
               <div id="session-freno-msg" style="margin-top: 10px"></div>
             </div>
@@ -1153,7 +1153,7 @@
               </div>
               <div id="fallo-sec" style="display: none">
                 <div class="alert ae" style="margin-bottom: 8px">
-                  ⚠ Protocolo de fallo activado.
+                  <span class="material-symbols-outlined ico">warning</span> Protocolo de fallo activado.
                 </div>
                 <div class="fg jreflect">
                   <label
@@ -1450,7 +1450,7 @@
                         )
                       "
                     >
-                      ✕
+                      <span class="material-symbols-outlined">close</span>
                     </button>
                   </div>
                 </div>
@@ -1495,7 +1495,7 @@
                         )
                       "
                     >
-                      ✕
+                      <span class="material-symbols-outlined">close</span>
                     </button>
                   </div>
                 </div>
@@ -1714,7 +1714,7 @@
                     class="img-remove"
                     onclick="clearZone(event, 'eod-img-htf-preview', 'eod-zone-htf', 'eod-img-htf', 'eod-zone-htf-label')"
                   >
-                    ✕
+                    <span class="material-symbols-outlined">close</span>
                   </button>
                 </div>
                 <div class="fg" style="margin-top: 8px">
@@ -1756,7 +1756,7 @@
                     class="img-remove"
                     onclick="clearZone(event, 'eod-img-mtf-preview', 'eod-zone-mtf', 'eod-img-mtf', 'eod-zone-mtf-label')"
                   >
-                    ✕
+                    <span class="material-symbols-outlined">close</span>
                   </button>
                 </div>
                 <div class="fg" style="margin-top: 8px">
@@ -1798,7 +1798,7 @@
                     class="img-remove"
                     onclick="clearZone(event, 'eod-img-ltf-preview', 'eod-zone-ltf', 'eod-img-ltf', 'eod-zone-ltf-label')"
                   >
-                    ✕
+                    <span class="material-symbols-outlined">close</span>
                   </button>
                 </div>
                 <div class="fg" style="margin-top: 8px">
@@ -2149,7 +2149,7 @@
                     onclick="prevMonth()"
                     aria-label="Mes anterior"
                   >
-                    &#8249;
+                    <span class="material-symbols-outlined">chevron_left</span>
                   </button>
                   <div class="cal-nav-title" id="cal-header-title"></div>
                   <button
@@ -2157,7 +2157,7 @@
                     onclick="nextMonth()"
                     aria-label="Mes siguiente"
                   >
-                    &#8250;
+                    <span class="material-symbols-outlined">chevron_right</span>
                   </button>
                   <button class="btn btn-sm" onclick="goToday()">Hoy</button>
                 </div>
@@ -2294,7 +2294,7 @@
                   id="replay-play-btn"
                   onclick="toggleReplayPlay()"
                 >
-                  ▶ Reproducir
+                  <span class="material-symbols-outlined ico">play_arrow</span> Reproducir
                 </button>
                 <input
                   type="range"
