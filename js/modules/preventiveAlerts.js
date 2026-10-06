@@ -64,7 +64,7 @@ export function renderPreventiveModal(violations) {
   document.getElementById("preventive-list").innerHTML = violations
     .map(
       (c) =>
-        `<div class="alert ae">⛔ <strong>${c.label}:</strong> ${c.detail}</div>`,
+        `<div class="alert ae"><span class="material-symbols-outlined ico">block</span> <strong>${c.label}:</strong> ${c.detail}</div>`,
     )
     .join("");
   document.getElementById("modal-preventive").classList.add("open");
