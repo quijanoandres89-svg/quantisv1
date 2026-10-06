@@ -67,7 +67,7 @@ export function renderHistorial(resetPage = true) {
           ${t.rr ? `<span style="font-size:10px;color:var(--text3);font-family:var(--mono)">RR ${escapeHTML(t.rr)}</span>` : ""}
           ${pnl !== null ? `<span style="font-size:10px;font-family:var(--mono);font-weight:600;color:${pnl >= 0 ? "var(--green)" : "var(--red)"}">${fmtUSD(pnl)}</span>` : ""}
           ${eff !== null ? `<span style="font-size:10px;font-family:var(--mono);color:${eff >= 70 ? "var(--green)" : eff >= 30 ? "var(--yellow)" : "var(--red)"}">Efic. ${eff.toFixed(0)}%</span>` : ""}
-          ${t.hora && t.horaCierre ? `<span style="font-size:10px;color:var(--text3);font-family:var(--mono)">⏱ ${calcDuracion(t.hora, t.horaCierre)}</span>` : ""}
+          ${t.hora && t.horaCierre ? `<span style="font-size:10px;color:var(--text3);font-family:var(--mono)"><span class="material-symbols-outlined ico">timer</span> ${calcDuracion(t.hora, t.horaCierre)}</span>` : ""}
           <span style="font-size:10px;color:var(--text3)">${escapeHTML(t.emo || "")}</span>
           ${t.imgHTF || t.imgLTF || t.img ? `<button class="btn btn-sm" style="padding:2px 8px;font-size:10px;margin-left:4px" onclick="verImagenes(${t.id})">Ver imágenes</button>` : ""}
         </div>
