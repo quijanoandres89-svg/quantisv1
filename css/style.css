@@ -536,38 +536,274 @@ textarea {
 select option {
   background: var(--bg3);
 }
+/* ============================================================
+   SISTEMA DE BOTONES (único) — un solo componente con variantes
+   ------------------------------------------------------------
+   Base .btn  +  variante (.btn-p primario, .btn-o contorno,
+   .btn-d peligro, .btn-g fantasma)  +  tamaño (.btn-sm / .btn-lg)
+   +  forma (.btn-icon redondo, .btn-block ancho completo).
+   Todas las variantes solo cambian 4 variables (--btn-*), así que
+   no se repite CSS por variante. Los nombres antiguos (btn, btn-p,
+   btn-sm, btn-d) siguen funcionando igual en todo el proyecto.
+   ============================================================ */
 .btn {
+  --btn-bg: var(--bg3);
+  --btn-bg-h: var(--bg4);
+  --btn-bd: var(--border2);
+  --btn-fg: var(--text);
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 7px 14px;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 16px;
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
   font-family: var(--font);
+  line-height: 1.2;
+  white-space: nowrap;
+  user-select: none;
   cursor: pointer;
-  border-radius: var(--rs);
-  border: 1px solid var(--border2);
-  background: var(--bg3);
-  color: var(--text);
-  transition: all 0.15s;
+  border-radius: 999px;
+  border: 1px solid var(--btn-bd);
+  background: var(--btn-bg);
+  color: var(--btn-fg);
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    box-shadow 0.15s,
+    filter 0.15s,
+    transform 0.1s;
 }
 .btn:hover {
-  background: var(--bg4);
+  background: var(--btn-bg-h);
 }
 .btn:active {
   transform: scale(0.96);
 }
+.btn .material-symbols-outlined {
+  font-size: 18px;
+  line-height: 1;
+}
+/* Primario: relleno de acento */
 .btn-p {
-  background: var(--acc);
-  border-color: var(--acc);
-  color: #fff;
+  --btn-bg: var(--acc);
+  --btn-bg-h: var(--acc);
+  --btn-bd: var(--acc);
+  --btn-fg: #fff;
+  box-shadow: 0 4px 14px var(--abg);
 }
 .btn-p:hover {
-  opacity: 0.9;
+  filter: brightness(1.1);
 }
+/* Contorno ("linear button" de la referencia) */
+.btn-o {
+  --btn-bg: transparent;
+  --btn-bg-h: var(--abg);
+  --btn-bd: var(--acc);
+  --btn-fg: var(--acc);
+}
+/* Peligro: tinte rojo, se rellena al pasar el mouse */
+.btn-d {
+  --btn-bg: var(--rbg);
+  --btn-bg-h: var(--red);
+  --btn-bd: var(--rbr);
+  --btn-fg: var(--red);
+}
+.btn-d:hover {
+  color: #fff;
+  border-color: var(--red);
+}
+/* Fantasma: sin caja hasta el hover (acciones terciarias) */
+.btn-g {
+  --btn-bg: transparent;
+  --btn-bd: transparent;
+  --btn-fg: var(--text2);
+}
+.btn-g:hover {
+  color: var(--text);
+}
+/* Tamaños */
 .btn-sm {
-  padding: 4px 10px;
+  padding: 5px 12px;
   font-size: 11px;
+  gap: 5px;
+}
+.btn-sm .material-symbols-outlined {
+  font-size: 16px;
+}
+.btn-lg {
+  padding: 12px 24px;
+  font-size: 13px;
+}
+.btn-block {
+  width: 100%;
+}
+/* Redondo solo-icono (silenciar, cerrar, ajustes...) */
+.btn-icon {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+}
+.btn-icon.btn-sm {
+  width: 30px;
+  height: 30px;
+}
+/* Deshabilitado: opacidad + rayado diagonal, sin hover ni "click" */
+.btn:disabled,
+.btn.is-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(
+    135deg,
+    transparent 0 5px,
+    rgba(255, 255, 255, 0.06) 5px 10px
+  );
+  box-shadow: none;
+}
+/* Cargando: el texto queda, delante va un .spinner */
+.btn.is-loading {
+  pointer-events: none;
+  opacity: 0.8;
+}
+
+/* Interruptor (toggle) — <label class="switch"><input type="checkbox"><span class="switch-track"></span></label> */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 22px;
+  flex-shrink: 0;
+}
+.switch input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 1;
+}
+.switch-track {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: var(--bg4);
+  border: 1px solid var(--border2);
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+.switch-track::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--text2);
+  transition:
+    transform 0.15s,
+    background 0.15s;
+}
+.switch input:checked + .switch-track {
+  background: var(--acc);
+  border-color: var(--acc);
+}
+.switch input:checked + .switch-track::after {
+  transform: translateX(18px);
+  background: #fff;
+}
+.switch input:disabled + .switch-track {
+  opacity: 0.45;
+}
+.switch input:focus-visible + .switch-track {
+  outline: 2px solid var(--acc);
+  outline-offset: 2px;
+}
+
+/* Control segmentado (pestañas / filtros) — <div class="seg"><button class="seg-item active">… */
+.seg {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}
+.seg-item {
+  padding: 6px 14px;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: var(--font);
+  color: var(--text2);
+  background: transparent;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+.seg-item:hover {
+  color: var(--text);
+}
+.seg-item.active {
+  background: var(--acc);
+  color: #fff;
+}
+.seg-item:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 2px;
+}
+
+/* Spinner y fila de carga (reemplaza textos "Cargando…" sueltos) */
+@keyframes qspin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.spinner {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 1em;
+  height: 1em;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: qspin 0.7s linear infinite;
+}
+.loading-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 16px;
+  font-size: 12px;
+  color: var(--text2);
+}
+.loading-row .spinner {
+  font-size: 16px;
+  color: var(--acc);
+}
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation-duration: 2s;
+  }
+}
+/* Icono en línea dentro de texto (alertas, badges, botones) */
+.ico {
+  font-size: 1.25em;
+  line-height: 1;
+  vertical-align: -0.2em;
+}
+.alert .ico {
+  margin-right: 2px;
+}
+.img-remove .material-symbols-outlined {
+  font-size: 14px;
 }
 .badge {
   display: inline-flex;
@@ -1053,6 +1289,10 @@ select option {
   transition: width 1s linear;
 }
 .freno-bigbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   width: 100%;
   padding: 15px;
   font-size: 14px;
@@ -1229,12 +1469,6 @@ select option {
 /* ============================================
    MODULOS AVANZADOS (v3) — estilos adicionales
    ============================================ */
-
-.btn-d {
-  border-color: var(--rbr);
-  color: var(--red);
-  background: var(--rbg);
-}
 
 .prog-wrap {
   background: var(--bg3);
@@ -1431,11 +1665,18 @@ select option {
     height: 100vh;
     z-index: 601;
     transform: translateX(-100%);
-    transition: transform 0.25s ease;
-    box-shadow: 4px 0 28px rgba(0, 0, 0, 0.45);
+    visibility: hidden;
+    transition:
+      transform 0.25s ease,
+      visibility 0s linear 0.25s;
   }
   .sidebar.open {
     transform: translateX(0);
+    visibility: visible;
+    box-shadow: 4px 0 28px rgba(0, 0, 0, 0.45);
+    transition:
+      transform 0.25s ease,
+      visibility 0s;
   }
   .sidebar-overlay {
     position: fixed;
@@ -1613,6 +1854,15 @@ select option {
    */
   .btn {
     min-height: 44px;
+  }
+  .btn-icon {
+    width: 44px;
+    height: 44px;
+  }
+  .btn-icon.btn-sm {
+    width: 34px;
+    height: 34px;
+    min-height: 34px;
   }
   /* Checklist (Journal + Modo Sesión): fila completa más alta y
      checkbox más grande, ahora que toda la fila es clickeable. */
@@ -2037,7 +2287,7 @@ select option {
   margin-top: auto;
 }
 .cal-swap {
-  font-size: 9px;
+  font-size: 13px;
   opacity: 0.7;
 }
 .cal-daypnl {
