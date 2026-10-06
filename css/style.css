@@ -794,7 +794,10 @@ select option {
   }
 }
 /* Icono en línea dentro de texto (alertas, badges, botones) */
-.ico {
+/* Doble clase a propósito: la hoja de Google Fonts se carga DESPUÉS de
+   style.css y su ".material-symbols-outlined { font-size: 24px }" le
+   ganaría a un selector de una sola clase. */
+.material-symbols-outlined.ico {
   font-size: 1.25em;
   line-height: 1;
   vertical-align: -0.2em;
@@ -2286,7 +2289,7 @@ select option {
   gap: 3px;
   margin-top: auto;
 }
-.cal-swap {
+.material-symbols-outlined.cal-swap {
   font-size: 13px;
   opacity: 0.7;
 }
