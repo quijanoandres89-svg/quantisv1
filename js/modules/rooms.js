@@ -235,7 +235,7 @@ export async function openRoom(roomId) {
   document.getElementById("salas-list-view").style.display = "none";
   document.getElementById("salas-detail-view").style.display = "";
   document.getElementById("salas-detail-content").innerHTML =
-    `<div class="empty">Cargando sala…</div>`;
+    `<div class="loading-row"><span class="spinner"></span> Cargando sala…</div>`;
 
   const supabase = await getSupabase();
   const { data: members } = await supabase
@@ -306,7 +306,7 @@ function renderRoomDetail(room, members, isOwner, myStatus) {
         <div class="ct">Audio y pantalla</div>
         <div id="room-daily-container" style="border-radius:var(--rs);overflow:hidden;display:none"></div>
         <div id="room-daily-controls">
-          <button class="btn btn-p btn-sm" onclick="startAudioCall('${room.id}')">🎙 Unirse al audio</button>
+          <button class="btn btn-p btn-sm" onclick="startAudioCall('${room.id}')"><span class="material-symbols-outlined ico">mic</span> Unirse al audio</button>
         </div>
       </div>`
       : "";
@@ -350,15 +350,15 @@ function renderCallControls(roomId, active) {
   const controls = document.getElementById("room-daily-controls");
   if (!controls) return;
   if (!active) {
-    controls.innerHTML = `<button class="btn btn-p btn-sm" onclick="startAudioCall('${roomId}')">🎙 Unirse al audio</button>`;
+    controls.innerHTML = `<button class="btn btn-p btn-sm" onclick="startAudioCall('${roomId}')"><span class="material-symbols-outlined ico">mic</span> Unirse al audio</button>`;
     return;
   }
   const muted = !lkRoom?.localParticipant?.isMicrophoneEnabled;
   const sharing = !!lkRoom?.localParticipant?.isScreenShareEnabled;
   controls.innerHTML = `
     <div style="display:flex;gap:6px;flex-wrap:wrap">
-      <button class="btn btn-sm" onclick="toggleMute()">${muted ? "🔇 Activar mic" : "🎙 Silenciar"}</button>
-      <button class="btn btn-sm ${sharing ? "btn-p" : ""}" onclick="toggleScreenShare()">${sharing ? "🖥 Dejar de compartir" : "🖥 Compartir pantalla"}</button>
+      <button class="btn btn-sm" onclick="toggleMute()">${muted ? `<span class="material-symbols-outlined ico">mic_off</span> Activar mic` : `<span class="material-symbols-outlined ico">mic</span> Silenciar`}</button>
+      <button class="btn btn-sm ${sharing ? "btn-p" : ""}" onclick="toggleScreenShare()">${sharing ? `<span class="material-symbols-outlined ico">stop_screen_share</span> Dejar de compartir` : `<span class="material-symbols-outlined ico">screen_share</span> Compartir pantalla`}</button>
       <button class="btn btn-d btn-sm" onclick="leaveAudioCall()">Salir del audio</button>
     </div>`;
 }
@@ -371,7 +371,7 @@ export async function startAudioCall(roomId) {
   }
   const controls = document.getElementById("room-daily-controls");
   const container = document.getElementById("room-daily-container");
-  if (controls) controls.innerHTML = `<div class="empty" style="padding:10px">Conectando…</div>`;
+  if (controls) controls.innerHTML = `<div class="loading-row"><span class="spinner"></span> Conectando…</div>`;
 
   try {
     const supabase = await getSupabase();
