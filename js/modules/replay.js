@@ -231,7 +231,7 @@ function stopPlay() {
     playInterval = null;
   }
   const btn = document.getElementById("replay-play-btn");
-  if (btn) btn.textContent = "▶ Reproducir";
+  if (btn) btn.innerHTML = '<span class="material-symbols-outlined ico">play_arrow</span> Reproducir';
 }
 
 // [window] onclick="toggleReplayPlay()"
@@ -242,7 +242,8 @@ export function toggleReplayPlay() {
   }
   if (!currentSeries.length) return;
   if (currentIndex >= currentSeries.length - 1) currentIndex = -1;
-  document.getElementById("replay-play-btn").textContent = "⏸ Pausar";
+  document.getElementById("replay-play-btn").innerHTML =
+    '<span class="material-symbols-outlined ico">pause</span> Pausar';
   playInterval = setInterval(() => {
     currentIndex++;
     if (currentIndex >= currentSeries.length) {
