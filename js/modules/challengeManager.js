@@ -118,10 +118,10 @@ export function renderChallenges() {
             ? "var(--yellow)"
             : "var(--acc)";
       const status = p.failed
-        ? "&#10060; Fallido"
+        ? `<span class="material-symbols-outlined ico">cancel</span> Fallido`
         : p.completed
-          ? "&#9989; Completado"
-          : "&#128260; En curso";
+          ? `<span class="material-symbols-outlined ico">check_circle</span> Completado`
+          : `<span class="material-symbols-outlined ico">timelapse</span> En curso`;
       const dayAlert = p.dayLossPct >= parseFloat(ch.maxDay) * 0.8;
       const totalAlert = p.totalLossPct >= parseFloat(ch.maxTotal) * 0.8;
       return `<div class="ch-card ${ch.active ? "active-ch" : ""}">
