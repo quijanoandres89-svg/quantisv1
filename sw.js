@@ -1,22 +1,24 @@
 /* ============================================================
    SERVICE WORKER — mejora "instalable como PWA".
    ------------------------------------------------------------
-   Estrategia: stale-while-revalidate sobre el "app shell" (HTML,
-   CSS, JS, íconos) — sirve de caché al instante y actualiza en
-   segundo plano. Solo intercepta pedidos GET del MISMO origen:
-   Supabase (auth, datos, Storage) y el widget de TradingView viven
-   en otros orígenes y nunca pasan por acá, así que los datos
-   siempre van a la red real. Esto permite que la interfaz cargue
-   rápido y se pueda VER lo último ya sincronizado sin conexión —
-   escribir trades/journals/EOD sin conexión queda fuera de alcance
-   (Supabase es la fuente de verdad, no hay cola de sincronización
-   offline todavía).
+   Estrategia: RED PRIMERO, caché solo como respaldo si no hay
+   conexión. Antes era "caché primero" (stale-while-revalidate),
+   que servía el HTML/JS viejo guardado de una visita anterior
+   mientras actualizaba en segundo plano — con Quantis cambiando
+   seguido, eso significaba que un cambio recién subido podía no
+   verse ni con hard refresh, porque el service worker ya había
+   contestado con lo viejo antes de que la red respondiera. Con red
+   primero, siempre se pide la versión actual; el caché solo entra
+   si el fetch falla (sin conexión), que es el único caso real que
+   nos interesa cubrir. Solo intercepta pedidos GET del MISMO
+   origen: Supabase y el widget de TradingView viven en otros
+   orígenes y nunca pasan por acá.
    Subir CACHE_NAME en futuras versiones si el app shell cambia de
    forma importante, para forzar a los navegadores a limpiar la
    caché vieja.
    ============================================================ */
 
-const CACHE_NAME = "quantis-shell-v1";
+const CACHE_NAME = "quantis-shell-v2";
 const APP_SHELL = ["./", "./index.html", "./manifest.json"];
 
 self.addEventListener("install", (event) => {
@@ -51,17 +53,14 @@ self.addEventListener("fetch", (event) => {
   }
 
   event.respondWith(
-    caches.match(req).then((cached) => {
-      const network = fetch(req)
-        .then((res) => {
-          if (res && res.ok) {
-            const copy = res.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(req, copy));
-          }
-          return res;
-        })
-        .catch(() => cached);
-      return cached || network;
-    }),
+    fetch(req)
+      .then((res) => {
+        if (res && res.ok) {
+          const copy = res.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(req, copy));
+        }
+        return res;
+      })
+      .catch(() => caches.match(req)),
   );
 });
