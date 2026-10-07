@@ -20,6 +20,7 @@
 import { getSupabase, getCurrentUser } from "./supabaseClient.js";
 import { escapeHTML, fmtDate } from "./utils.js";
 import { avatarHTML } from "./avatar.js";
+import * as RoomCall from "./roomCall.js";
 import { showToast } from "./toast.js";
 import { getMyRole } from "./admin.js";
 import { closeModal } from "./challengeManager.js";
@@ -32,7 +33,6 @@ let profilesCache = new Map(); // id -> {id, display_name, email, avatar_url}
 let currentRoom = null;
 let messagesChannel = null;
 let approvedCounts = new Map(); // room_id -> número de aprobados (público, sin exponer quiénes)
-let lkRoom = null; // instancia activa de LivekitClient.Room, si hay una llamada en curso
 
 const TABS = [
   { id: "mias", label: "Mis salas" },
@@ -311,24 +311,24 @@ function renderRoomDetail(room, members, isOwner, myStatus) {
   const callHTML =
     isOwner || myStatus === "approved"
       ? `<div class="card">
-        <div class="ct">Audio y pantalla</div>
-        <div id="room-daily-container" style="border-radius:var(--rs);overflow:hidden;display:none"></div>
-        <div id="room-daily-controls">
-          <button class="btn btn-p btn-sm" onclick="startAudioCall('${room.id}')"><span class="material-symbols-outlined ico">mic</span> Unirse al audio</button>
+        <div class="ct">Llamada de audio y pantalla</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+          <div style="font-size:12px;color:var(--text2)">Habla con la sala y comparte tu pantalla. Si ya estás dentro, aparecerá a pantalla completa.</div>
+          <button class="btn btn-p" onclick="startAudioCall('${room.id}')"><span class="material-symbols-outlined">call</span> Unirme a la llamada</button>
         </div>
       </div>`
       : "";
 
   const chatHTML =
     isOwner || myStatus === "approved"
-      ? `<div class="card">
+      ? `<div id="room-chat-slot"><div class="card room-chat-card" id="room-chat-card">
         <div class="ct">Chat</div>
-        <div id="room-chat-messages" style="max-height:320px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;margin-bottom:10px"></div>
-        <div style="display:flex;gap:8px">
+        <div id="room-chat-messages" class="room-chat-msgs"></div>
+        <div class="room-chat-form">
           <input type="text" id="room-chat-input" placeholder="Escribe un mensaje..." onkeydown="if(event.key==='Enter'){sendRoomMessage()}" />
           <button class="btn btn-p btn-sm" onclick="sendRoomMessage()">Enviar</button>
         </div>
-      </div>`
+      </div></div>`
       : myStatus === "pending"
         ? `<div class="empty">Tu solicitud está pendiente de aprobación del admin de la sala.</div>`
         : `<div class="empty">No tienes acceso al chat de esta sala.</div>`;
@@ -349,114 +349,38 @@ function renderRoomDetail(room, members, isOwner, myStatus) {
 }
 
 /* ---------------- Audio y pantalla (LiveKit) ----------------
-   Sin interfaz prearmada (a diferencia de Daily) — este bloque
-   arma a mano: conectar, publicar el micrófono, escuchar pistas
-   remotas (audio de otros + video si alguien comparte pantalla), y
-   los 3 controles (silenciar, compartir pantalla, salir). */
-
-function renderCallControls(roomId, active) {
-  const controls = document.getElementById("room-daily-controls");
-  if (!controls) return;
-  if (!active) {
-    controls.innerHTML = `<button class="btn btn-p btn-sm" onclick="startAudioCall('${roomId}')"><span class="material-symbols-outlined ico">mic</span> Unirse al audio</button>`;
-    return;
-  }
-  const muted = !lkRoom?.localParticipant?.isMicrophoneEnabled;
-  const sharing = !!lkRoom?.localParticipant?.isScreenShareEnabled;
-  controls.innerHTML = `
-    <div style="display:flex;gap:6px;flex-wrap:wrap">
-      <button class="btn btn-sm" onclick="toggleMute()">${muted ? `<span class="material-symbols-outlined ico">mic_off</span> Activar mic` : `<span class="material-symbols-outlined ico">mic</span> Silenciar`}</button>
-      <button class="btn btn-sm ${sharing ? "btn-p" : ""}" onclick="toggleScreenShare()">${sharing ? `<span class="material-symbols-outlined ico">stop_screen_share</span> Dejar de compartir` : `<span class="material-symbols-outlined ico">screen_share</span> Compartir pantalla`}</button>
-      <button class="btn btn-d btn-sm" onclick="leaveAudioCall()">Salir del audio</button>
-    </div>`;
-}
+   Toda la lógica de la llamada vive en roomCall.js. Aquí solo se le
+   entrega el contexto de la sala y cómo mover el chat (la tarjeta del
+   chat se "traslada" al panel de la llamada y vuelve al terminar, sin
+   perder mensajes ni la suscripción en vivo). */
 
 // [window] onclick="startAudioCall('roomId')"
 export async function startAudioCall(roomId) {
-  if (!window.LivekitClient) {
-    showToast("error", "No se pudo cargar el audio", "El SDK de LiveKit no cargó — revisa tu conexión y recarga la página.");
-    return;
-  }
-  const controls = document.getElementById("room-daily-controls");
-  const container = document.getElementById("room-daily-container");
-  if (controls) controls.innerHTML = `<div class="loading-row"><span class="spinner"></span> Conectando…</div>`;
-
-  try {
-    const supabase = await getSupabase();
-    const { data, error } = await supabase.functions.invoke("create-livekit-token", {
-      body: { room_id: roomId },
-    });
-    if (error) throw error;
-    if (data?.error) throw new Error(data.error);
-
-    const { Room, RoomEvent, Track } = window.LivekitClient;
-    lkRoom = new Room();
-
-    lkRoom.on(RoomEvent.TrackSubscribed, (track) => {
-      if (track.kind === Track.Kind.Audio || track.kind === Track.Kind.Video) {
-        const el = track.attach();
-        if (track.kind === Track.Kind.Video) {
-          el.style.width = "100%";
-          el.style.borderRadius = "var(--rs)";
-          el.style.marginTop = "8px";
-        }
-        container.appendChild(el);
-      }
-    });
-    lkRoom.on(RoomEvent.TrackUnsubscribed, (track) => {
-      track.detach().forEach((el) => el.remove());
-    });
-    lkRoom.on(RoomEvent.Disconnected, () => leaveAudioCall());
-
-    container.style.display = "block";
-    await lkRoom.connect(data.url, data.token);
-    await lkRoom.localParticipant.setMicrophoneEnabled(true);
-
-    renderCallControls(roomId, true);
-  } catch (e) {
-    showToast("error", "No se pudo iniciar el audio", e.message);
-    renderCallControls(roomId, false);
-  }
-}
-
-// [window] onclick="toggleMute()"
-export async function toggleMute() {
-  if (!lkRoom || !currentRoom) return;
-  const enabled = lkRoom.localParticipant.isMicrophoneEnabled;
-  await lkRoom.localParticipant.setMicrophoneEnabled(!enabled);
-  renderCallControls(currentRoom.id, true);
-}
-
-// [window] onclick="toggleScreenShare()"
-export async function toggleScreenShare() {
-  if (!lkRoom || !currentRoom) return;
-  try {
-    const sharing = lkRoom.localParticipant.isScreenShareEnabled;
-    await lkRoom.localParticipant.setScreenShareEnabled(!sharing);
-    renderCallControls(currentRoom.id, true);
-  } catch (e) {
-    // El usuario cancela el picker de "qué pantalla compartir" también cae acá — no es un error real.
-    if (e.name !== "NotAllowedError") showToast("error", "No se pudo compartir pantalla", e.message);
-  }
-}
-
-// [window] onclick="leaveAudioCall()"
-export function leaveAudioCall() {
-  if (lkRoom) {
-    lkRoom.disconnect();
-    lkRoom = null;
-  }
-  const container = document.getElementById("room-daily-container");
-  if (container) {
-    container.style.display = "none";
-    container.innerHTML = "";
-  }
-  if (currentRoom) renderCallControls(currentRoom.id, false);
+  const room = currentRoom;
+  if (!room || room.id !== roomId) return;
+  await RoomCall.startCall({
+    roomId,
+    roomName: room.name,
+    hostId: room.created_by,
+    myUserId,
+    getUser: (id) => profilesCache.get(id),
+    ensureUsers: ensureProfiles,
+    mountChat: (slot) => {
+      const card = document.getElementById("room-chat-card");
+      if (card) slot.appendChild(card);
+    },
+    unmountChat: () => {
+      const card = document.getElementById("room-chat-card");
+      const home = document.getElementById("room-chat-slot");
+      if (card && home) home.appendChild(card);
+    },
+    onClosed: () => {},
+  });
 }
 
 // [window] onclick="closeRoomDetail()"
 export function closeRoomDetail() {
-  leaveAudioCall();
+  RoomCall.leave();
   if (messagesChannel) {
     messagesChannel.unsubscribe();
     messagesChannel = null;
