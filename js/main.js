@@ -44,6 +44,7 @@ import * as Rooms from "./modules/rooms.js";
 import * as Auth from "./modules/auth.js";
 import * as Avatar from "./modules/avatar.js";
 import * as RoomCall from "./modules/roomCall.js";
+import * as RoomFiles from "./modules/roomFiles.js";
 
 /**
  * Router de páginas: activa la página pedida en el HTML y dispara
@@ -256,6 +257,14 @@ Object.assign(window, {
   toggleMute: RoomCall.toggleMute,
   toggleScreenShare: RoomCall.toggleScreenShare,
   toggleCallPanel: RoomCall.togglePanel,
+  pickRoomFile: Rooms.pickRoomFile,
+  onRoomFileChosen: Rooms.onRoomFileChosen,
+  handleRoomPaste: Rooms.handleRoomPaste,
+  handleRoomDrop: Rooms.handleRoomDrop,
+  clearRoomPending: Rooms.clearRoomPending,
+  openRoomImage: RoomFiles.openRoomImage,
+  openRoomFile: RoomFiles.openRoomFile,
+  closeRoomLightbox: RoomFiles.closeRoomLightbox,
 });
 
 // --- Chart.js: animación de entrada global ---
