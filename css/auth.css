@@ -208,20 +208,6 @@
   min-width: 0;
 }
 
-.sidebar-session-avatar {
-  width: 26px;
-  height: 26px;
-  flex-shrink: 0;
-  border-radius: 50%;
-  background: var(--abg);
-  color: var(--acc);
-  font-family: var(--font);
-  font-weight: 700;
-  font-size: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
 
 .sidebar-session-name {
   font-size: 12.5px;
