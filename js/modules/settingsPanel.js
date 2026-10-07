@@ -28,6 +28,8 @@ import { queueToastAfterReload } from "./toast.js";
 import * as Instruments from "./instruments.js";
 import { getMyProfile, saveMyDisplayName, ROLE_LABEL } from "./admin.js";
 import { updateSessionDisplayName } from "./auth.js";
+import { profileAvatarRowHTML } from "./avatar.js";
+import { escapeHTML } from "./utils.js";
 
 let activeSectionId = null;
 let escListenerAttached = false;
@@ -184,21 +186,20 @@ function renderExportSection(container) {
    ------------------------------------------------------------ */
 function renderProfileSection(container) {
   const p = getMyProfile();
-  const initial = (p?.display_name || p?.email || "?").charAt(0).toUpperCase();
   container.innerHTML = `
     <div class="settings-section-title">Perfil</div>
     <div class="settings-section-sub">Personalización de tu cuenta en QUANTIS.</div>
-    <div class="settings-avatar">${initial}</div>
+    <div id="profile-avatar-slot">${profileAvatarRowHTML(p)}</div>
     <div class="fg">
       <label>Nombre</label>
       <div style="display:flex;gap:8px">
-        <input type="text" id="profile-name-input" value="${(p?.display_name || "").replace(/"/g, "&quot;")}" placeholder="Tu nombre" style="flex:1" />
+        <input type="text" id="profile-name-input" value="${escapeHTML(p?.display_name || "")}" placeholder="Tu nombre" style="flex:1" />
         <button class="btn btn-p btn-sm" onclick="saveProfileName()">Guardar</button>
       </div>
     </div>
     <div class="fg settings-field-disabled">
       <label>Correo</label>
-      <input type="email" disabled value="${p?.email || ""}" />
+      <input type="email" disabled value="${escapeHTML(p?.email || "")}" />
     </div>
     <div class="fg settings-field-disabled">
       <label>Rol</label>
