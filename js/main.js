@@ -42,6 +42,7 @@ import { chartTooltipStyle } from "./modules/utils.js";
 import * as Admin from "./modules/admin.js";
 import * as Rooms from "./modules/rooms.js";
 import * as Auth from "./modules/auth.js";
+import * as Avatar from "./modules/avatar.js";
 
 /**
  * Router de páginas: activa la página pedida en el HTML y dispara
@@ -95,7 +96,7 @@ async function init() {
   // en cuanto resuelve, reemplaza el correo por el nombre real.
   Admin.loadMyRole().then(() => {
     const p = Admin.getMyProfile();
-    if (p?.display_name) Auth.updateSessionDisplayName(p.display_name);
+    if (p) Auth.updateSessionProfile(p);
   });
   Toast.showQueuedToast();
   await State.load();
@@ -221,6 +222,8 @@ Object.assign(window, {
   toggleResetButton: SettingsPanel.toggleResetButton,
   confirmResetQuantis: SettingsPanel.confirmResetQuantis,
   saveProfileName: SettingsPanel.saveProfileName,
+  openAvatarPicker: Avatar.openAvatarPicker,
+  removeMyAvatar: Avatar.removeMyAvatar,
   // instruments (pares configurables)
   openInstrumentForm: Instruments.openInstrumentForm,
   closeInstrumentForm: Instruments.closeInstrumentForm,
