@@ -19,6 +19,7 @@
 
 import { getSupabase, getCurrentUser } from "./supabaseClient.js";
 import { escapeHTML, fmtDate } from "./utils.js";
+import { avatarHTML } from "./avatar.js";
 import { showToast } from "./toast.js";
 import { getMyRole } from "./admin.js";
 import { closeModal } from "./challengeManager.js";
@@ -27,7 +28,7 @@ let myUserId = null;
 let activeTab = "mias"; // mias | publicas | solicitudes
 let allRooms = [];
 let allMembers = []; // todas las filas de room_members visibles para mí (RLS)
-let profilesCache = new Map(); // id -> {display_name, email}
+let profilesCache = new Map(); // id -> {id, display_name, email, avatar_url}
 let currentRoom = null;
 let messagesChannel = null;
 let approvedCounts = new Map(); // room_id -> número de aprobados (público, sin exponer quiénes)
@@ -45,7 +46,7 @@ async function ensureProfiles(ids) {
   const supabase = await getSupabase();
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, display_name, email")
+    .select("id, display_name, email, avatar_url")
     .in("id", missing);
   if (error) return;
   (data || []).forEach((p) => profilesCache.set(p.id, p));
@@ -56,8 +57,14 @@ function profileName(id) {
   return p ? p.display_name || p.email : "Usuario";
 }
 
+// Avatar de cualquier usuario ya cargado en profilesCache (mismo componente que el sidebar).
+function userAvatar(id, size = "sm") {
+  return avatarHTML(profilesCache.get(id) || { id }, size);
+}
+
 // [window] go('salas', ...) la dispara desde main.js
 export async function renderRooms() {
+  profilesCache.clear(); // por si alguien cambió su nombre o foto desde la última vez
   closeRoomDetail(); // por si quedó un detalle/chat abierto de una visita anterior
   document.getElementById("salas-list-view").style.display = "";
 
@@ -149,8 +156,8 @@ function roomCardHTML(r) {
       <span class="badge binf">${approved} participante${approved === 1 ? "" : "s"}</span>
     </div>
     ${r.description ? `<div class="jprev">${escapeHTML(r.description)}</div>` : ""}
-    <div style="font-size:11px;color:var(--text3);font-family:var(--mono);margin:4px 0 8px">
-      Creada por ${escapeHTML(profileName(r.created_by))} · ${fmtDate(r.created_at.slice(0, 10))}
+    <div class="who" style="font-size:11px;color:var(--text3);font-family:var(--mono);margin:4px 0 8px">
+      ${userAvatar(r.created_by, "xs")}Creada por ${escapeHTML(profileName(r.created_by))} · ${fmtDate(r.created_at.slice(0, 10))}
       ${r.scheduled_at ? ` · Programada: ${escapeHTML(new Date(r.scheduled_at).toLocaleString())}` : ""}
     </div>
     ${actionHTML}
@@ -228,6 +235,7 @@ export async function saveRoom() {
 
 // [window] onclick="openRoom('id')"
 export async function openRoom(roomId) {
+  profilesCache.clear();
   const room = allRooms.find((r) => r.id === roomId);
   if (!room) return;
   currentRoom = room;
@@ -271,7 +279,7 @@ function renderRoomDetail(room, members, isOwner, myStatus) {
             ? pending
                 .map(
                   (m) => `<div class="jf">
-              <div class="jfl">${escapeHTML(profileName(m.user_id))}</div>
+              <div class="jfl who">${userAvatar(m.user_id, "sm")}${escapeHTML(profileName(m.user_id))}</div>
               <div style="display:flex;gap:6px">
                 <button class="btn btn-sm btn-p" onclick="approveMember('${room.id}','${m.user_id}')">Aprobar</button>
                 <button class="btn btn-sm btn-d" onclick="kickMember('${room.id}','${m.user_id}', true)">Rechazar</button>
@@ -289,7 +297,7 @@ function renderRoomDetail(room, members, isOwner, myStatus) {
             ? approved
                 .map(
                   (m) => `<div class="jf">
-              <div class="jfl">${escapeHTML(profileName(m.user_id))}</div>
+              <div class="jfl who">${userAvatar(m.user_id, "sm")}${escapeHTML(profileName(m.user_id))}</div>
               <button class="btn btn-sm btn-d" onclick="kickMember('${room.id}','${m.user_id}', false)">Expulsar</button>
             </div>`,
                 )
@@ -332,7 +340,7 @@ function renderRoomDetail(room, members, isOwner, myStatus) {
 
   document.getElementById("salas-detail-content").innerHTML = `
     <div class="pt" style="margin-top:10px">${escapeHTML(room.name)}</div>
-    <div class="ps">${room.is_public ? "Pública" : "Privada"} · Creada por ${escapeHTML(profileName(room.created_by))}</div>
+    <div class="ps who">${room.is_public ? "Pública" : "Privada"} · ${userAvatar(room.created_by, "xs")}Creada por ${escapeHTML(profileName(room.created_by))}</div>
     ${room.description ? `<div class="jprev" style="margin-bottom:14px">${escapeHTML(room.description)}</div>` : ""}
     ${leaveBtn}
     ${adminHTML}
@@ -564,9 +572,12 @@ async function loadAndSubscribeChat(roomId) {
 
 function chatMessageHTML(m) {
   const mine = m.user_id === myUserId;
-  return `<div style="align-self:${mine ? "flex-end" : "flex-start"};max-width:80%">
-    <div style="font-size:10px;color:var(--text3);font-family:var(--mono);margin-bottom:2px;text-align:${mine ? "right" : "left"}">${escapeHTML(profileName(m.user_id))}</div>
-    <div style="background:${mine ? "var(--acc)" : "var(--bg3)"};color:${mine ? "#fff" : "var(--text)"};padding:7px 11px;border-radius:12px;font-size:13px">${escapeHTML(m.content)}</div>
+  return `<div style="display:flex;gap:8px;align-items:flex-end;flex-direction:${mine ? "row-reverse" : "row"};align-self:${mine ? "flex-end" : "flex-start"};max-width:85%">
+    ${userAvatar(m.user_id, "sm")}
+    <div style="min-width:0">
+      <div style="font-size:10px;color:var(--text3);font-family:var(--mono);margin-bottom:2px;text-align:${mine ? "right" : "left"}">${escapeHTML(profileName(m.user_id))}</div>
+      <div style="background:${mine ? "var(--acc)" : "var(--bg3)"};color:${mine ? "#fff" : "var(--text)"};padding:7px 11px;border-radius:12px;font-size:13px;overflow-wrap:anywhere">${escapeHTML(m.content)}</div>
+    </div>
   </div>`;
 }
 
