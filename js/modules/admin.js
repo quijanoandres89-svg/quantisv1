@@ -16,6 +16,8 @@
 import { getSupabase, getCurrentUser } from "./supabaseClient.js";
 import { escapeHTML } from "./utils.js";
 import { showToast } from "./toast.js";
+import { avatarHTML, profileAvatarRowHTML } from "./avatar.js";
+import { updateSessionProfile } from "./auth.js";
 
 let myProfile = null; // { id, email, display_name, role }
 let roleChangeChannel = null;
@@ -39,7 +41,22 @@ function applyNavVisibility() {
 function refreshOpenProfileSection() {
   const roleEl = document.getElementById("profile-role-display");
   if (roleEl && myProfile) roleEl.value = ROLE_LABEL[myProfile.role] || myProfile.role;
+  const avatarSlot = document.getElementById("profile-avatar-slot");
+  if (avatarSlot && myProfile) avatarSlot.innerHTML = profileAvatarRowHTML(myProfile);
 }
+
+/** Aplica un cambio parcial al perfil propio (foto nueva, nombre...)
+ * y refresca todo lo que lo muestra: sidebar, Configuración → Perfil
+ * y el nav de Administración. Lo disparan avatar.js (evento
+ * "quantis:profile-patch"), saveMyDisplayName() y el Realtime. */
+export function patchMyProfile(patch) {
+  if (!myProfile) return;
+  myProfile = { ...myProfile, ...patch };
+  applyNavVisibility();
+  updateSessionProfile(myProfile);
+  refreshOpenProfileSection();
+}
+document.addEventListener("quantis:profile-patch", (e) => patchMyProfile(e.detail));
 
 /** Se llama una vez al iniciar sesión (main.js → init()). Carga el
  * perfil completo del usuario actual, muestra/oculta el nav de
@@ -56,7 +73,7 @@ export async function loadMyRole() {
     const supabase = await getSupabase();
     const { data, error } = await supabase
       .from("profiles")
-      .select("id, email, display_name, role")
+      .select("id, email, display_name, role, avatar_url")
       .eq("id", user.id)
       .single();
     if (error) throw error;
@@ -66,6 +83,7 @@ export async function loadMyRole() {
     myProfile = null;
   }
   applyNavVisibility();
+  if (myProfile) updateSessionProfile(myProfile);
   subscribeToOwnRoleChanges(user.id);
   return myProfile?.role || null;
 }
@@ -80,9 +98,7 @@ async function subscribeToOwnRoleChanges(userId) {
       { event: "UPDATE", schema: "public", table: "profiles", filter: `id=eq.${userId}` },
       (payload) => {
         const prevRole = myProfile?.role;
-        myProfile = payload.new;
-        applyNavVisibility();
-        refreshOpenProfileSection();
+        patchMyProfile(payload.new);
         if (prevRole && prevRole !== payload.new.role) {
           showToast(
             "info",
@@ -119,7 +135,7 @@ export async function saveMyDisplayName(newName) {
     const supabase = await getSupabase();
     const { error } = await supabase.rpc("update_my_display_name", { new_name: name });
     if (error) throw error;
-    if (myProfile) myProfile.display_name = name;
+    patchMyProfile({ display_name: name });
     showToast("success", "Nombre actualizado", name);
     return true;
   } catch (e) {
@@ -135,12 +151,19 @@ export function renderAdmin() {
   searchUserByEmail(); // sin texto en el buscador, esto trae TODOS los usuarios
 }
 
+/** El correo y el rol viajan en data-* y el onclick los lee con
+ * this.dataset. Antes el correo se metía con JSON.stringify() dentro
+ * de onclick="...", y sus comillas dobles cerraban el atributo
+ * (onclick="setUserRole(" ...) → error de sintaxis al hacer clic y el
+ * botón no hacía nada: el rol nunca llegaba al servidor. */
 function roleButtonsHTML(profile) {
   return Object.keys(ROLE_LABEL)
-    .map(
-      (r) =>
-        `<button class="btn btn-sm" ${r === profile.role ? "disabled" : ""} onclick="setUserRole(${JSON.stringify(profile.email)}, '${r}')">${ROLE_LABEL[r]}</button>`,
-    )
+    .map((r) => {
+      const current = r === profile.role;
+      return current
+        ? `<button class="btn btn-sm btn-p" aria-current="true" style="cursor:default"><span class="material-symbols-outlined">check</span>${ROLE_LABEL[r]}</button>`
+        : `<button class="btn btn-sm" data-email="${escapeHTML(profile.email)}" data-role="${r}" onclick="setUserRole(this.dataset.email, this.dataset.role)">${ROLE_LABEL[r]}</button>`;
+    })
     .join("");
 }
 
@@ -153,7 +176,7 @@ export async function searchUserByEmail() {
     const supabase = await getSupabase();
     let req = supabase
       .from("profiles")
-      .select("id, email, display_name, role")
+      .select("id, email, display_name, role, avatar_url")
       .order("email")
       .limit(100);
     if (query) req = req.ilike("email", `%${query}%`);
@@ -169,7 +192,7 @@ export async function searchUserByEmail() {
       .map(
         (p) => `<div class="ji" style="cursor:default">
         <div class="jh">
-          <div class="jdate">${escapeHTML(p.display_name || p.email)}</div>
+          <div class="jdate who">${avatarHTML(p, "sm")}${escapeHTML(p.display_name || p.email)}</div>
           <span class="badge binf">${ROLE_LABEL[p.role] || p.role}</span>
         </div>
         <div style="font-size:11px;color:var(--text3);font-family:var(--mono);margin-bottom:8px">${escapeHTML(p.email)}</div>
@@ -184,6 +207,10 @@ export async function searchUserByEmail() {
 
 // [window] onclick="setUserRole(email, role)" en los botones de rol
 export async function setUserRole(email, role) {
+  // Quitarte tu propio superadmin te deja sin este panel: pedir confirmación.
+  if (email === myProfile?.email && role !== "superadmin") {
+    if (!confirm("Vas a quitarte el rol de Superadmin a ti mismo y perderás acceso a este panel. ¿Continuar?")) return;
+  }
   try {
     const supabase = await getSupabase();
     const { error } = await supabase.rpc("set_user_role", {
