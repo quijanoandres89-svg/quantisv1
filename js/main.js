@@ -43,6 +43,7 @@ import * as Admin from "./modules/admin.js";
 import * as Rooms from "./modules/rooms.js";
 import * as Auth from "./modules/auth.js";
 import * as Avatar from "./modules/avatar.js";
+import * as RoomCall from "./modules/roomCall.js";
 
 /**
  * Router de páginas: activa la página pedida en el HTML y dispara
@@ -251,9 +252,10 @@ Object.assign(window, {
   deleteRoom: Rooms.deleteRoom,
   sendRoomMessage: Rooms.sendRoomMessage,
   startAudioCall: Rooms.startAudioCall,
-  leaveAudioCall: Rooms.leaveAudioCall,
-  toggleMute: Rooms.toggleMute,
-  toggleScreenShare: Rooms.toggleScreenShare,
+  leaveAudioCall: RoomCall.leave,
+  toggleMute: RoomCall.toggleMute,
+  toggleScreenShare: RoomCall.toggleScreenShare,
+  toggleCallPanel: RoomCall.togglePanel,
 });
 
 // --- Chart.js: animación de entrada global ---
