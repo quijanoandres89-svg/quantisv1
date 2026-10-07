@@ -3498,14 +3498,20 @@ body.call-active {
 .call-tiles {
   flex: 1;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-  grid-auto-rows: minmax(140px, 220px);
-  gap: 10px;
+  /* Cada mosaico mide entre 180 y 260 px de ancho y NUNCA se estira para
+     llenar la fila: con 1 persona queda un solo mosaico centrado, con
+     proporción fija, en vez de una caja ancha y baja. */
+  grid-template-columns: repeat(auto-fit, minmax(180px, 260px));
+  grid-auto-rows: auto;
+  gap: 12px;
+  justify-content: center;
   align-content: center;
+  padding: 4px;
   overflow-y: auto;
 }
 .call-tile {
   position: relative;
+  aspect-ratio: 4 / 3;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -3519,9 +3525,12 @@ body.call-active {
     border-color 0.15s,
     box-shadow 0.15s;
 }
+/* Aro hacia adentro (inset): un box-shadow hacia afuera lo recortaba el
+   contenedor con scroll y se veía deformado. Así sigue exactamente el
+   borde redondeado de cada mosaico. */
 .call-tile.speaking {
   border-color: var(--acc);
-  box-shadow: 0 0 0 2px var(--acc);
+  box-shadow: inset 0 0 0 2px var(--acc);
 }
 .call-tile-name {
   max-width: 90%;
@@ -3538,13 +3547,21 @@ body.call-active {
 }
 .call-tile-mic {
   position: absolute;
-  right: 8px;
-  bottom: 8px;
-  font-size: 16px;
+  right: 6px;
+  top: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  font-size: 14px;
   color: var(--text2);
+  background: var(--bg3);
+  border-radius: 50%;
 }
 .call-tile-mic.off {
   color: var(--red);
+  background: var(--rbg);
 }
 /* Con pantalla compartida: los mosaicos pasan a una tira arriba */
 .call-main.has-stage .call-tiles {
@@ -3553,9 +3570,21 @@ body.call-active {
   grid-auto-flow: column;
   grid-auto-columns: 128px;
   grid-auto-rows: 96px;
+  justify-content: start;
   overflow-x: auto;
   overflow-y: hidden;
   align-content: start;
+}
+.call-main.has-stage .call-tile {
+  aspect-ratio: auto;
+}
+.call-main.has-stage .call-tile-mic {
+  width: 20px;
+  height: 20px;
+  font-size: 13px;
+}
+.call-main.has-stage .call-tile-name {
+  padding: 0 6px;
 }
 .call-main.has-stage .call-tile {
   gap: 2px;
@@ -3749,8 +3778,11 @@ body.call-active {
     padding: 8px;
   }
   .call-tiles {
-    grid-template-columns: repeat(2, 1fr);
-    grid-auto-rows: minmax(120px, 170px);
+    grid-template-columns: repeat(auto-fit, minmax(140px, 200px));
+    gap: 8px;
+  }
+  .call-main.has-stage .call-tiles {
+    grid-template-columns: none;
   }
   .call-view.panel-open .call-panel {
     position: absolute;
