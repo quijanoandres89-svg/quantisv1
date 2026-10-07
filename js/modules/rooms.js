@@ -21,6 +21,7 @@ import { getSupabase, getCurrentUser } from "./supabaseClient.js";
 import { escapeHTML, fmtDate } from "./utils.js";
 import { avatarHTML } from "./avatar.js";
 import * as RoomCall from "./roomCall.js";
+import { prepareFile, uploadRoomFile, attachmentHTML, hydrateAttachments, purgeRoomFiles, fmtSize } from "./roomFiles.js";
 import { showToast } from "./toast.js";
 import { getMyRole } from "./admin.js";
 import { closeModal } from "./challengeManager.js";
@@ -32,6 +33,8 @@ let allMembers = []; // todas las filas de room_members visibles para mí (RLS)
 let profilesCache = new Map(); // id -> {id, display_name, email, avatar_url}
 let currentRoom = null;
 let messagesChannel = null;
+let pendingFile = null; // { prepared, previewUrl } — archivo elegido y aún no enviado
+let sendingMessage = false;
 let approvedCounts = new Map(); // room_id -> número de aprobados (público, sin exponer quiénes)
 
 const TABS = [
@@ -321,12 +324,15 @@ function renderRoomDetail(room, members, isOwner, myStatus) {
 
   const chatHTML =
     isOwner || myStatus === "approved"
-      ? `<div id="room-chat-slot"><div class="card room-chat-card" id="room-chat-card">
+      ? `<div id="room-chat-slot"><div class="card room-chat-card" id="room-chat-card" ondragover="event.preventDefault()" ondrop="handleRoomDrop(event)">
         <div class="ct">Chat</div>
         <div id="room-chat-messages" class="room-chat-msgs"></div>
+        <div id="room-chat-pending" class="room-chat-pending" style="display:none"></div>
         <div class="room-chat-form">
-          <input type="text" id="room-chat-input" placeholder="Escribe un mensaje..." onkeydown="if(event.key==='Enter'){sendRoomMessage()}" />
-          <button class="btn btn-p btn-sm" onclick="sendRoomMessage()">Enviar</button>
+          <button class="btn btn-icon btn-g" aria-label="Adjuntar imagen o PDF" title="Adjuntar imagen o PDF (también puedes pegar o arrastrar)" onclick="pickRoomFile()"><span class="material-symbols-outlined">attach_file</span></button>
+          <input type="file" id="room-chat-file" accept="image/*,application/pdf" style="display:none" onchange="onRoomFileChosen(this)" />
+          <input type="text" id="room-chat-input" maxlength="2000" placeholder="Escribe un mensaje..." onkeydown="if(event.key==='Enter'){sendRoomMessage()}" onpaste="handleRoomPaste(event)" />
+          <button class="btn btn-p btn-sm" id="room-chat-send" onclick="sendRoomMessage()">Enviar</button>
         </div>
       </div></div>`
       : myStatus === "pending"
@@ -381,6 +387,7 @@ export async function startAudioCall(roomId) {
 // [window] onclick="closeRoomDetail()"
 export function closeRoomDetail() {
   RoomCall.leave();
+  clearRoomPending();
   if (messagesChannel) {
     messagesChannel.unsubscribe();
     messagesChannel = null;
@@ -446,9 +453,11 @@ export async function leaveRoom(roomId) {
 
 // [window] onclick="deleteRoom(roomId)"
 export async function deleteRoom(roomId) {
-  if (!confirm("¿Eliminar esta sala? Esto borra también su chat y membresías. No se puede deshacer."))
+  if (!confirm("¿Eliminar esta sala? Esto borra también su chat, sus archivos y membresías. No se puede deshacer."))
     return;
   const supabase = await getSupabase();
+  // Primero los archivos: una vez borrada la sala ya no habría permiso para quitarlos.
+  await purgeRoomFiles(roomId);
   const { error } = await supabase.from("rooms").delete().eq("id", roomId);
   if (error) {
     showToast("error", "No se pudo eliminar la sala", error.message);
@@ -475,6 +484,7 @@ async function loadAndSubscribeChat(roomId) {
   if (container) {
     container.innerHTML = (msgs || []).map(chatMessageHTML).join("");
     container.scrollTop = container.scrollHeight;
+    hydrateAttachments(container);
   }
 
   if (messagesChannel) messagesChannel.unsubscribe();
@@ -489,6 +499,7 @@ async function loadAndSubscribeChat(roomId) {
         if (!c) return;
         c.insertAdjacentHTML("beforeend", chatMessageHTML(payload.new));
         c.scrollTop = c.scrollHeight;
+        hydrateAttachments(c);
       },
     )
     .subscribe();
@@ -496,26 +507,110 @@ async function loadAndSubscribeChat(roomId) {
 
 function chatMessageHTML(m) {
   const mine = m.user_id === myUserId;
+  const text = m.content ? `<div>${escapeHTML(m.content)}</div>` : "";
   return `<div style="display:flex;gap:8px;align-items:flex-end;flex-direction:${mine ? "row-reverse" : "row"};align-self:${mine ? "flex-end" : "flex-start"};max-width:85%">
     ${userAvatar(m.user_id, "sm")}
     <div style="min-width:0">
       <div style="font-size:10px;color:var(--text3);font-family:var(--mono);margin-bottom:2px;text-align:${mine ? "right" : "left"}">${escapeHTML(profileName(m.user_id))}</div>
-      <div style="background:${mine ? "var(--acc)" : "var(--bg3)"};color:${mine ? "#fff" : "var(--text)"};padding:7px 11px;border-radius:12px;font-size:13px;overflow-wrap:anywhere">${escapeHTML(m.content)}</div>
+      <div style="display:flex;flex-direction:column;gap:6px;background:${mine ? "var(--acc)" : "var(--bg3)"};color:${mine ? "#fff" : "var(--text)"};padding:7px 11px;border-radius:12px;font-size:13px;overflow-wrap:anywhere">${text}${attachmentHTML(m)}</div>
     </div>
   </div>`;
 }
 
+/* ---- Archivo adjunto pendiente (elegir / pegar / arrastrar → vista previa → enviar) ---- */
+
+function renderPending() {
+  const box = document.getElementById("room-chat-pending");
+  if (!box) return;
+  if (!pendingFile) {
+    box.style.display = "none";
+    box.innerHTML = "";
+    return;
+  }
+  const p = pendingFile.prepared;
+  box.style.display = "flex";
+  box.innerHTML = `${p.kind === "image" ? `<img src="${pendingFile.previewUrl}" alt="" />` : `<span class="material-symbols-outlined">picture_as_pdf</span>`}
+    <span class="room-chat-pending-name">${escapeHTML(p.name)}<small>${fmtSize(p.size)}</small></span>
+    <button class="btn btn-icon btn-sm btn-g" aria-label="Quitar archivo" onclick="clearRoomPending()"><span class="material-symbols-outlined">close</span></button>`;
+}
+
+async function setPendingFile(file) {
+  clearRoomPending();
+  try {
+    const prepared = await prepareFile(file);
+    pendingFile = {
+      prepared,
+      previewUrl: prepared.kind === "image" ? URL.createObjectURL(prepared.blob) : null,
+    };
+    renderPending();
+    document.getElementById("room-chat-input")?.focus();
+  } catch (e) {
+    showToast("error", "No se puede adjuntar", e.message);
+  }
+}
+
+// [window] onclick="pickRoomFile()" — botón del clip
+export function pickRoomFile() {
+  document.getElementById("room-chat-file")?.click();
+}
+// [window] onchange="onRoomFileChosen(this)"
+export function onRoomFileChosen(input) {
+  const f = input.files && input.files[0];
+  input.value = ""; // permite volver a elegir el mismo archivo
+  if (f) setPendingFile(f);
+}
+// [window] onpaste="handleRoomPaste(event)" — Ctrl+V con una captura en el portapapeles
+export function handleRoomPaste(e) {
+  const f = [...(e.clipboardData?.files || [])].find((x) => x.type.startsWith("image/") || x.type === "application/pdf");
+  if (f) {
+    e.preventDefault();
+    setPendingFile(f);
+  }
+}
+// [window] ondrop="handleRoomDrop(event)"
+export function handleRoomDrop(e) {
+  e.preventDefault();
+  const f = e.dataTransfer?.files && e.dataTransfer.files[0];
+  if (f) setPendingFile(f);
+}
+// [window] onclick="clearRoomPending()"
+export function clearRoomPending() {
+  if (pendingFile?.previewUrl) URL.revokeObjectURL(pendingFile.previewUrl);
+  pendingFile = null;
+  renderPending();
+}
+
 // [window] onclick="sendRoomMessage()"
 export async function sendRoomMessage() {
+  const room = currentRoom;
+  if (sendingMessage || !room) return;
   const input = document.getElementById("room-chat-input");
-  const content = input.value.trim();
-  if (!content || !currentRoom) return;
-  input.value = "";
-  const supabase = await getSupabase();
-  const { error } = await supabase
-    .from("room_messages")
-    .insert({ room_id: currentRoom.id, user_id: myUserId, content });
-  if (error) {
-    showToast("error", "No se pudo enviar el mensaje", error.message);
+  const content = (input?.value || "").trim();
+  if (!content && !pendingFile) return;
+  const sendBtn = document.getElementById("room-chat-send");
+  const label = sendBtn ? sendBtn.innerHTML : "Enviar";
+  sendingMessage = true;
+  if (pendingFile && sendBtn) {
+    sendBtn.disabled = true;
+    sendBtn.innerHTML = `<span class="spinner"></span>`;
+  }
+  try {
+    const row = { room_id: room.id, user_id: myUserId, content };
+    if (pendingFile) Object.assign(row, await uploadRoomFile(room.id, myUserId, pendingFile.prepared));
+    const supabase = await getSupabase();
+    const { error } = await supabase.from("room_messages").insert(row);
+    if (error) throw error;
+    // Solo se limpia si salió bien: si falla, no pierdes lo que escribiste ni el archivo.
+    if (input) input.value = "";
+    clearRoomPending();
+  } catch (e) {
+    showToast("error", "No se pudo enviar el mensaje", e.message);
+  } finally {
+    sendingMessage = false;
+    const b = document.getElementById("room-chat-send");
+    if (b) {
+      b.disabled = false;
+      b.innerHTML = label;
+    }
   }
 }
