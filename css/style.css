@@ -3401,3 +3401,382 @@ body.light .avatar {
   background: none;
   accent-color: var(--acc);
 }
+
+/* ============================================================
+   LLAMADA DE SALA (Fase C) — vista a pantalla completa
+   Barra superior · mosaicos con avatar · pantalla compartida ·
+   panel (Participantes + Chat) · barra inferior de controles
+   ============================================================ */
+body.call-active {
+  overflow: hidden;
+}
+.call-view {
+  position: fixed;
+  inset: 0;
+  z-index: 450;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  height: 100vh;
+  height: 100dvh;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.call-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.call-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.call-room-name {
+  font-weight: 700;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.call-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--acc);
+  white-space: nowrap;
+}
+.call-live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--acc);
+  animation: callpulse 1.6s ease-in-out infinite;
+}
+@keyframes callpulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+.call-top-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+}
+.call-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text2);
+}
+.call-meta .material-symbols-outlined {
+  font-size: 16px;
+}
+.call-body {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+.call-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+}
+.call-tiles {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  grid-auto-rows: minmax(140px, 220px);
+  gap: 10px;
+  align-content: center;
+  overflow-y: auto;
+}
+.call-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+.call-tile.speaking {
+  border-color: var(--acc);
+  box-shadow: 0 0 0 2px var(--acc);
+}
+.call-tile-name {
+  max-width: 90%;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.call-tile-role {
+  font-size: 10px;
+  color: var(--acc);
+  font-family: var(--mono);
+}
+.call-tile-mic {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  font-size: 16px;
+  color: var(--text2);
+}
+.call-tile-mic.off {
+  color: var(--red);
+}
+/* Con pantalla compartida: los mosaicos pasan a una tira arriba */
+.call-main.has-stage .call-tiles {
+  flex: none;
+  grid-template-columns: none;
+  grid-auto-flow: column;
+  grid-auto-columns: 128px;
+  grid-auto-rows: 96px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  align-content: start;
+}
+.call-main.has-stage .call-tile {
+  gap: 2px;
+}
+.call-main.has-stage .call-tile .avatar {
+  --av-size: 36px;
+}
+.call-main.has-stage .call-tile-role {
+  display: none;
+}
+.call-stage {
+  display: none;
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  background: #000;
+  border-radius: 14px;
+  overflow: hidden;
+}
+.call-main.has-stage .call-stage {
+  display: block;
+}
+.call-stage-video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
+}
+.call-stage-label {
+  position: absolute;
+  left: 10px;
+  top: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 999px;
+}
+.call-stage-label .material-symbols-outlined {
+  font-size: 15px;
+}
+.call-stage-fs {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+}
+/* Panel lateral */
+.call-panel {
+  display: none;
+  width: 320px;
+  flex-shrink: 0;
+  flex-direction: column;
+  border-left: 1px solid var(--border);
+  background: var(--bg2);
+  min-height: 0;
+}
+.call-view.panel-open .call-panel {
+  display: flex;
+}
+.call-sec {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 12px;
+}
+.call-sec + .call-sec {
+  border-top: 1px solid var(--border);
+}
+.call-sec-chat {
+  flex: 1;
+}
+.call-sec-title {
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.call-people-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 34vh;
+  overflow-y: auto;
+}
+.call-person {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: 10px;
+}
+.call-person.speaking {
+  background: var(--abg);
+}
+.call-person-info {
+  flex: 1;
+  min-width: 0;
+}
+.call-person-name {
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.call-person-role {
+  font-size: 10px;
+  color: var(--text3);
+}
+.call-person-mic {
+  font-size: 16px;
+  color: var(--text2);
+}
+.call-person-mic.off {
+  color: var(--red);
+}
+.call-chat-slot {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+/* Barra inferior */
+.call-bar {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+  overflow-x: auto;
+}
+.btn.call-ctl {
+  flex-direction: column;
+  gap: 3px;
+  min-width: 78px;
+  padding: 8px 10px;
+  border-radius: 14px;
+  font-size: 10px;
+}
+.btn.call-ctl .material-symbols-outlined {
+  font-size: 22px;
+}
+.call-connecting {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+}
+/* Chat de sala (se usa en el detalle y dentro de la llamada) */
+.room-chat-msgs {
+  max-height: 320px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.room-chat-form {
+  display: flex;
+  gap: 8px;
+}
+.call-chat-slot .room-chat-card {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+}
+.call-chat-slot .room-chat-msgs {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+}
+/* Celular / tableta: el panel pasa a hoja inferior y solo cabe uno */
+@media (max-width: 900px) {
+  .call-top {
+    padding: 8px 12px;
+  }
+  .call-main {
+    padding: 8px;
+  }
+  .call-tiles {
+    grid-template-columns: repeat(2, 1fr);
+    grid-auto-rows: minmax(120px, 170px);
+  }
+  .call-view.panel-open .call-panel {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+    width: auto;
+    height: 55%;
+    z-index: 3;
+    border-left: none;
+    border-top: 1px solid var(--border2);
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.35);
+  }
+  .call-sec-chat,
+  .call-sec {
+    min-height: 0;
+    flex: 1;
+  }
+  .call-people-list {
+    max-height: none;
+  }
+  .call-bar {
+    justify-content: flex-start;
+  }
+  .btn.call-ctl {
+    min-width: 64px;
+  }
+}
