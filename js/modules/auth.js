@@ -11,6 +11,8 @@
    ============================================================ */
 
 import { getSupabase } from "./supabaseClient.js";
+import { avatarHTML } from "./avatar.js";
+import { escapeHTML } from "./utils.js";
 
 const OVERLAY_ID = "quantis-auth-overlay";
 
@@ -142,43 +144,52 @@ export async function logout() {
 /** Pinta el nombre del usuario logueado + botón de cerrar sesión al
  * final del sidebar. Llamar una vez ya con sesión activa. */
 let lastEmailFallback = null;
+let lastProfile = null; // { id, email, display_name, avatar_url }
+
+function sessionUserHTML(profile) {
+  const label = profile.display_name || lastEmailFallback || "Usuario";
+  return {
+    label,
+    html: `${avatarHTML(profile, "sm")}<span class="sidebar-session-name">${escapeHTML(label)}</span>`,
+  };
+}
 
 /** displayName es opcional a propósito: al arrancar la app todavía
  * no se cargó el perfil (ver admin.js → loadMyRole, que corre en
  * paralelo, sin await), así que esto pinta el correo primero sin
- * esperar a nadie, y updateSessionDisplayName() lo reemplaza por el
- * nombre real en cuanto el perfil termina de cargar. */
+ * esperar a nadie, y updateSessionProfile() lo reemplaza por el
+ * nombre y la foto reales en cuanto el perfil termina de cargar. */
 export function renderSessionInfo(user, displayName, containerId = "sidebar-session") {
   const container = document.getElementById(containerId);
   if (!container || !user) return;
   lastEmailFallback = user.email || "Usuario";
-
-  const label = displayName || lastEmailFallback;
-  const initial = label.trim().charAt(0).toUpperCase() || "?";
+  lastProfile = { id: user.id, email: user.email, display_name: displayName || null, avatar_url: null };
+  const { label, html } = sessionUserHTML(lastProfile);
 
   container.innerHTML = `
-    <div class="sidebar-session-user" data-tooltip="${label}">
-      <span class="sidebar-session-avatar">${initial}</span>
-      <span class="sidebar-session-name">${label}</span>
-    </div>
+    <div class="sidebar-session-user" data-tooltip="${escapeHTML(label)}">${html}</div>
     <button class="sidebar-session-logout" data-tooltip="Cerrar sesión" onclick="logout()">
       <span class="material-symbols-outlined">logout</span>
     </button>
   `;
 }
 
-/** Actualiza en el sitio el nombre mostrado en el pie del sidebar,
- * sin reconstruir todo el bloque. La llama main.js apenas carga el
- * perfil (admin.js → loadMyRole), y settingsPanel.js justo después
- * de guardar un nombre nuevo. */
-export function updateSessionDisplayName(name) {
-  const label = name || lastEmailFallback || "Usuario";
-  const nameEl = document.querySelector(".sidebar-session-name");
-  const avatarEl = document.querySelector(".sidebar-session-avatar");
+/** Actualiza en el sitio nombre + foto del pie del sidebar, sin
+ * reconstruir el botón de cerrar sesión. La llaman admin.js (al
+ * cargar el perfil, al cambiar la foto y por Realtime desde otro
+ * dispositivo). */
+export function updateSessionProfile(profile) {
+  lastProfile = { ...(lastProfile || {}), ...(profile || {}) };
   const wrapEl = document.querySelector(".sidebar-session-user");
-  if (nameEl) nameEl.textContent = label;
-  if (avatarEl) avatarEl.textContent = label.trim().charAt(0).toUpperCase() || "?";
-  if (wrapEl) wrapEl.setAttribute("data-tooltip", label);
+  if (!wrapEl) return;
+  const { label, html } = sessionUserHTML(lastProfile);
+  wrapEl.innerHTML = html;
+  wrapEl.setAttribute("data-tooltip", label);
+}
+
+/** Compatibilidad: solo cambia el nombre (la foto se conserva). */
+export function updateSessionDisplayName(name) {
+  updateSessionProfile({ display_name: name });
 }
 
 /* ============================================================
