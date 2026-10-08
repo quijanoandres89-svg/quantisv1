@@ -37,7 +37,7 @@ let stageSid = null; // sid de la pista que hoy se muestra en el escenario
 let stageVideo = null;
 let shareBusy = false;
 let shareAllowed = true; // false si la sala es "solo el anfitrión comparte pantalla" y yo no lo soy
-let panels = { people: true, chat: true };
+let panels = { people: true, chat: true, req: false };
 const audioEls = new Map(); // sid de pista de audio remota -> <audio>
 const tileEls = new Map(); // identity -> elemento del mosaico
 
@@ -263,6 +263,9 @@ function renderControls() {
             : "Tu navegador o dispositivo no permite compartir pantalla (en celular suele estar disponible solo para ver).",
       },
     ),
+    requestList().length > 0 && window.matchMedia(MOBILE_MQ).matches
+      ? ctl("toggleCallPanel('req')", "person_add", `Solicitudes (${requestList().length})`, { on: panels.req })
+      : "",
     ctl("toggleCallPanel('chat')", "chat", "Chat", { on: panels.chat }),
     ctl("toggleCallPanel('people')", "group", "Participantes", { on: panels.people }),
     ctl("leaveAudioCall()", "call_end", "Salir", { danger: true }),
@@ -275,14 +278,65 @@ function renderControls() {
   }
 }
 
+/* ---------------- Solicitudes de ingreso (solo el anfitrión) ---------------- */
+
+const requestList = () => (ctx && ctx.isHost && ctx.getRequests ? ctx.getRequests() : []);
+
+function renderRequests() {
+  const sec = view && view.querySelector("#call-req-sec");
+  if (!sec) return;
+  const list = requestList();
+  const mobile = window.matchMedia(MOBILE_MQ).matches;
+  const show = list.length > 0 && (!mobile || panels.req);
+  sec.style.display = show ? "" : "none";
+  if (!show) return;
+  const title = sec.querySelector("#call-req-title");
+  if (title) title.textContent = `Solicitudes de ingreso (${list.length})`;
+  const html = list
+    .map(
+      (u) => `<div class="call-person">
+        ${avatarHTML(u, "sm")}
+        <div class="call-person-info">
+          <div class="call-person-name">${escapeHTML(u.display_name || u.email || "Usuario")}</div>
+          <div class="call-person-role">Quiere unirse a la sala</div>
+        </div>
+        <button class="btn btn-sm btn-icon btn-p" aria-label="Aprobar" data-id="${escapeHTML(u.id)}" onclick="callApprove(this.dataset.id)">${icon("check")}</button>
+        <button class="btn btn-sm btn-icon btn-d" aria-label="Rechazar" data-id="${escapeHTML(u.id)}" onclick="callReject(this.dataset.id)">${icon("close")}</button>
+      </div>`,
+    )
+    .join("");
+  const box = sec.querySelector("#call-req-list");
+  if (box && box._html !== html) {
+    box._html = html;
+    box.innerHTML = html;
+  }
+}
+
+// [window] onclick="callApprove(userId)" / callReject(userId) — desde el panel de la llamada
+export function approveRequest(userId) {
+  if (ctx && ctx.approve) ctx.approve(userId);
+}
+export function rejectRequest(userId) {
+  if (ctx && ctx.reject) ctx.reject(userId);
+}
+
+/** rooms.js lo llama cuando cambian los miembros de la sala (llega/sale una solicitud). */
+export function notifyRequestsChanged() {
+  if (!view || !lk) return;
+  applyPanels();
+  renderControls();
+}
+
 function applyPanels() {
   if (!view) return;
   const mobile = window.matchMedia(MOBILE_MQ).matches;
-  const any = panels.people || panels.chat;
+  const reqShown = requestList().length > 0 && (!mobile || panels.req);
+  const any = panels.people || panels.chat || reqShown;
   view.classList.toggle("panel-open", any);
   view.classList.toggle("panel-mobile", mobile);
   view.querySelector("#call-people-sec").style.display = panels.people ? "" : "none";
   view.querySelector("#call-chat-sec").style.display = panels.chat ? "" : "none";
+  renderRequests();
 }
 
 // [window] onclick="toggleCallPanel('chat'|'people')"
@@ -290,7 +344,7 @@ export function togglePanel(which) {
   const mobile = window.matchMedia(MOBILE_MQ).matches;
   const next = !panels[which];
   // En celular solo cabe un panel a la vez.
-  panels = mobile ? { people: false, chat: false, [which]: next } : { ...panels, [which]: next };
+  panels = mobile ? { people: false, chat: false, req: false, [which]: next } : { ...panels, [which]: next };
   applyPanels();
   renderControls();
   if (panels.chat) {
@@ -407,6 +461,10 @@ function buildView() {
         <div class="call-stage" id="call-stage"></div>
       </div>
       <aside class="call-panel">
+        <section class="call-sec call-req-sec" id="call-req-sec" style="display:none">
+          <div class="call-sec-title" id="call-req-title">Solicitudes de ingreso</div>
+          <div class="call-people-list" id="call-req-list"></div>
+        </section>
         <section class="call-sec" id="call-people-sec">
           <div class="call-sec-title" id="call-people-title">Participantes</div>
           <div class="call-people-list" id="call-people-list"></div>
@@ -423,7 +481,7 @@ function buildView() {
   document.body.classList.add("call-active");
   ctx.mountChat(view.querySelector("#call-chat-slot"));
   const mobile = window.matchMedia(MOBILE_MQ).matches;
-  if (mobile) panels = { people: false, chat: false };
+  if (mobile) panels = { people: false, chat: false, req: false };
   applyPanels();
 }
 
@@ -458,7 +516,7 @@ export async function startCall(context) {
     return;
   }
   ctx = context;
-  panels = { people: true, chat: true };
+  panels = { people: true, chat: true, req: false };
   shareAllowed = true;
   buildView();
 
