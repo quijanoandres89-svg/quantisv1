@@ -3934,3 +3934,416 @@ body.call-active {
   display: flex;
   gap: 8px;
 }
+
+/* ============================================================
+   SALAS (Fase C3) — tarjetas, crear sala, invitaciones
+   ============================================================ */
+.rooms-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.rooms-search {
+  position: relative;
+}
+.rooms-search .material-symbols-outlined {
+  position: absolute;
+  left: 11px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 18px;
+  color: var(--text3);
+  pointer-events: none;
+}
+.rooms-search input {
+  width: 220px;
+  padding-left: 34px;
+  border-radius: 999px;
+}
+.seg-badge {
+  display: inline-block;
+  margin-left: 6px;
+  min-width: 16px;
+  padding: 1px 5px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 14px;
+  text-align: center;
+  color: #fff;
+  background: var(--red);
+  border-radius: 999px;
+}
+/* Tarjeta de sala */
+.room-card {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  transition: border-color 0.15s;
+}
+.room-card:hover {
+  border-color: var(--border2);
+}
+.room-card.is-live {
+  border-color: var(--acc);
+}
+.room-card-ico {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: var(--bg3);
+  color: var(--text2);
+}
+.room-card.is-live .room-card-ico {
+  background: var(--abg);
+  color: var(--acc);
+}
+.room-card-ico .material-symbols-outlined {
+  font-size: 24px;
+}
+.room-card-main {
+  min-width: 0;
+}
+.room-card-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 700;
+}
+.room-card-title .material-symbols-outlined {
+  font-size: 15px;
+  color: var(--text3);
+}
+.room-card-title span.t {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.room-card-sub {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--text3);
+  font-family: var(--mono);
+}
+.room-card-desc {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--text2);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.room-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.room-tag {
+  padding: 2px 9px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text2);
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}
+.room-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 600;
+  color: var(--text3);
+}
+.room-pill .material-symbols-outlined {
+  font-size: 14px;
+}
+.room-pill.live {
+  color: var(--acc);
+}
+.room-pill-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--acc);
+  animation: callpulse 1.6s ease-in-out infinite;
+}
+.room-card-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+.room-card-when {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--text2);
+  font-family: var(--mono);
+  white-space: nowrap;
+}
+.room-card-when .material-symbols-outlined {
+  font-size: 15px;
+}
+.room-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.room-menu-wrap {
+  position: relative;
+}
+.room-menu {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 30;
+  min-width: 170px;
+  padding: 6px;
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 12px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.4);
+}
+.room-menu.open {
+  display: block;
+}
+.room-menu button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--text);
+  text-align: left;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.room-menu button:hover {
+  background: var(--bg3);
+}
+.room-menu button.danger {
+  color: var(--red);
+}
+.room-menu .material-symbols-outlined {
+  font-size: 17px;
+}
+/* Modal crear sala */
+.fg-grid3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+}
+.room-type-opts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.room-type-opt {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  font: inherit;
+  color: var(--text2);
+  text-align: left;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: 12px;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+}
+.room-type-opt b {
+  display: block;
+  font-size: 12px;
+  color: var(--text);
+}
+.room-type-opt small {
+  font-size: 10px;
+  color: var(--text3);
+}
+.room-type-opt.active {
+  border-color: var(--acc);
+  background: var(--abg);
+}
+.room-type-opt.active .material-symbols-outlined {
+  color: var(--acc);
+}
+.invite-results {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 6px;
+}
+.invite-result {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 6px 8px;
+  font: inherit;
+  color: var(--text);
+  text-align: left;
+  background: none;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.invite-result:hover {
+  background: var(--bg3);
+}
+.invite-result-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.invite-result-name {
+  font-size: 12px;
+  font-weight: 600;
+}
+.invite-result-mail {
+  font-size: 10px;
+  color: var(--text3);
+  font-family: var(--mono);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.invite-result .material-symbols-outlined {
+  font-size: 18px;
+  color: var(--text3);
+}
+.invite-result.picked .material-symbols-outlined {
+  color: var(--acc);
+}
+.invite-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.invite-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 4px 3px 4px;
+  font-size: 11px;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: 999px;
+}
+.invite-chip button {
+  display: inline-flex;
+  padding: 0 4px 0 0;
+  color: var(--text3);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+.invite-chip button .material-symbols-outlined {
+  font-size: 15px;
+}
+/* Pantalla de invitación */
+.invite-screen {
+  max-width: 420px;
+  margin: 30px auto;
+  padding: 28px 24px;
+  text-align: center;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+}
+.invite-ico {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  margin-bottom: 14px;
+  color: var(--acc);
+  background: var(--abg);
+  border-radius: 50%;
+}
+.invite-ico .material-symbols-outlined {
+  font-size: 32px;
+}
+.invite-title {
+  font-size: 20px;
+  font-weight: 800;
+}
+.invite-sub {
+  margin: 6px 0 14px;
+  font-size: 13px;
+  color: var(--text2);
+}
+.invite-stats {
+  display: flex;
+  justify-content: center;
+  gap: 22px;
+  margin: 18px 0 20px;
+  font-size: 11px;
+  color: var(--text3);
+  font-family: var(--mono);
+}
+.invite-stats > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.invite-stats .material-symbols-outlined {
+  font-size: 20px;
+  color: var(--text2);
+}
+.invite-stats b {
+  color: var(--text);
+  font-size: 12px;
+}
+.invite-screen .btn + .btn {
+  margin-top: 8px;
+}
+@media (max-width: 700px) {
+  .room-card {
+    grid-template-columns: auto 1fr;
+  }
+  .room-card-side {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+  .fg-grid3 {
+    grid-template-columns: 1fr 1fr;
+  }
+  .rooms-search input {
+    width: 100%;
+  }
+  .rooms-search {
+    flex: 1;
+  }
+}
