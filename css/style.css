@@ -4045,7 +4045,6 @@ body.call-active {
   color: var(--text2);
   display: -webkit-box;
   -webkit-line-clamp: 2;
-  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -4347,4 +4346,16 @@ body.call-active {
   .rooms-search {
     flex: 1;
   }
+}
+
+/* Solicitudes de ingreso dentro de la llamada (solo anfitrión) */
+.call-req-sec {
+  background: var(--abg);
+  border-bottom: 1px solid var(--acc);
+}
+.call-req-sec .call-sec-title {
+  color: var(--acc);
+}
+.call-req-sec .call-person {
+  gap: 8px;
 }
