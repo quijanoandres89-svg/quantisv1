@@ -101,6 +101,7 @@ async function init() {
     if (p) Auth.updateSessionProfile(p);
   });
   Toast.showQueuedToast();
+  Rooms.startRoomsRealtime(); // avisos y refrescos de Salas desde el inicio, no solo al abrir esa sección
   await State.load();
   Instruments.renderAllInstrumentSelects();
   document.getElementById("today-str").textContent =
@@ -257,6 +258,8 @@ Object.assign(window, {
   toggleMute: RoomCall.toggleMute,
   toggleScreenShare: RoomCall.toggleScreenShare,
   toggleCallPanel: RoomCall.togglePanel,
+  callApprove: RoomCall.approveRequest,
+  callReject: RoomCall.rejectRequest,
   openCreateRoomModal: Rooms.openCreateRoomModal,
   setRoomType: Rooms.setRoomType,
   filterRooms: Rooms.filterRooms,
