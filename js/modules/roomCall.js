@@ -36,6 +36,7 @@ let rafId = 0;
 let stageSid = null; // sid de la pista que hoy se muestra en el escenario
 let stageVideo = null;
 let shareBusy = false;
+let shareAllowed = true; // false si la sala es "solo el anfitrión comparte pantalla" y yo no lo soy
 let panels = { people: true, chat: true };
 const audioEls = new Map(); // sid de pista de audio remota -> <audio>
 const tileEls = new Map(); // identity -> elemento del mosaico
@@ -245,7 +246,7 @@ function renderControls() {
   const lp = lk.localParticipant;
   const micOn = lp.isMicrophoneEnabled;
   const sharing = lp.isScreenShareEnabled;
-  const canShare = canShareScreen();
+  const canShare = canShareScreen() && shareAllowed;
   const html = [
     ctl("toggleMute()", micOn ? "mic" : "mic_off", micOn ? "Micrófono" : "Silenciado", { on: micOn }),
     ctl(
@@ -255,7 +256,11 @@ function renderControls() {
       {
         on: sharing,
         disabled: !canShare,
-        title: canShare ? "" : "Tu navegador o dispositivo no permite compartir pantalla (en celular suele estar disponible solo para ver).",
+        title: canShare
+          ? ""
+          : !shareAllowed
+            ? "En esta sala solo el anfitrión puede compartir pantalla."
+            : "Tu navegador o dispositivo no permite compartir pantalla (en celular suele estar disponible solo para ver).",
       },
     ),
     ctl("toggleCallPanel('chat')", "chat", "Chat", { on: panels.chat }),
@@ -345,6 +350,10 @@ function micError(e) {
 // [window] onclick="toggleScreenShare()"
 export async function toggleScreenShare() {
   if (!lk || shareBusy) return;
+  if (!shareAllowed) {
+    showToast("info", "No disponible", "En esta sala solo el anfitrión puede compartir pantalla.");
+    return;
+  }
   if (!canShareScreen()) {
     showToast("info", "No disponible", "Este navegador o dispositivo no permite compartir pantalla.");
     return;
@@ -450,6 +459,7 @@ export async function startCall(context) {
   }
   ctx = context;
   panels = { people: true, chat: true };
+  shareAllowed = true;
   buildView();
 
   try {
@@ -459,6 +469,8 @@ export async function startCall(context) {
     });
     if (error) throw error;
     if (data?.error) throw new Error(data.error);
+    // El servidor manda la última palabra: si el token no trae permiso de pantalla, no hay forma de compartir.
+    shareAllowed = ctx.canShare !== false && data.can_share_screen !== false;
 
     const { Room, RoomEvent } = window.LivekitClient;
     lk = new Room({ adaptiveStream: true, dynacast: true });
