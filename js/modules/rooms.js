@@ -39,7 +39,11 @@ let approvedCounts = new Map(); // room_id -> número de aprobados (público, si
 let roomsQuery = ""; // texto del buscador de salas
 let liveCounts = new Map(); // room_id -> conectados ahora mismo a la llamada (vía Edge Function)
 let livePoll = null;
-let membershipChannel = null; // Realtime de MIS membresías (invitaciones nuevas, aprobaciones...)
+let roomsChannel = null; // Realtime permanente de salas y membresías (desde que inicias sesión)
+let syncTimer = null;
+let syncing = false;
+let syncAgain = false;
+let lastSig = ""; // firma de los datos: si no cambió nada, no se re-pinta (sin parpadeos ni menús que se cierran)
 let detailMembers = []; // filas de room_members de la sala abierta
 let newRoomPublic = false; // tipo elegido en el modal de crear sala
 const pickers = { create: { selected: new Map() }, detail: { selected: new Map() } }; // selector de usuarios a invitar
@@ -96,7 +100,8 @@ export async function renderRooms() {
   await loadRoomsData();
   renderTabs(); // de nuevo: ahora que hay datos, el contador de Invitaciones es real
   renderRoomsList();
-  subscribeMemberships();
+  startRoomsRealtime(); // ya corre desde el login; aquí solo garantiza que exista
+  lastSig = dataSignature();
   refreshLive();
   if (!livePoll) livePoll = setInterval(refreshLive, 20000);
 }
@@ -359,41 +364,166 @@ async function refreshLive() {
   }
 }
 
-async function subscribeMemberships() {
-  if (membershipChannel || !myUserId) return;
+/* ---------------- Sincronización en vivo (todo lo compartido entre usuarios) ----------------
+   Una sola suscripción permanente a room_members y rooms, creada al iniciar
+   sesión (no al abrir Salas), más un respaldo cada 30 s y al volver a la
+   pestaña. Cada cambio dispara syncRooms(), que recarga, COMPARA con el
+   estado de antes y:
+     - avisa de lo que importa (invitación, solicitud aprobada, solicitud
+       nueva si eres anfitrión, sala eliminada, te removieron),
+     - refresca lo que esté abierto SIN reconstruirlo entero: la lista, o en
+       el detalle solo las listas de solicitudes/participantes — así una
+       llamada o un chat en curso no se tocan,
+     - saca de la sala (y de la llamada) a quien ya no tiene acceso.
+   Antes solo se refrescaba si estabas mirando la LISTA; quien esperaba una
+   aprobación dentro del detalle de la sala no veía nada hasta salir y volver. */
+
+function dataSignature() {
+  return JSON.stringify([
+    allRooms.map((r) => [r.id, r.name, r.description, r.is_public, r.scheduled_at, r.ends_at, r.tags, r.screen_share_policy]),
+    allMembers.map((m) => [m.room_id, m.user_id, m.status]),
+    [...approvedCounts],
+  ]);
+}
+
+const hasAccess = (st) => st === "owner" || st === "approved";
+const roleIn = (r) => (r.created_by === myUserId ? "owner" : myStatusFor(r.id));
+
+function scheduleSync() {
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(syncRooms, 350);
+}
+
+export async function startRoomsRealtime() {
+  if (roomsChannel) return;
+  const user = await getCurrentUser();
+  if (!user) return;
+  myUserId = user.id;
+  await loadRoomsData(); // línea base silenciosa: así el primer cambio real sí se detecta como cambio
+  lastSig = dataSignature();
   const supabase = await getSupabase();
-  membershipChannel = supabase
-    .channel(`my-memberships-${myUserId}`)
-    .on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "room_members", filter: `user_id=eq.${myUserId}` },
-      async (payload) => {
-        if (payload.eventType === "INSERT" && payload.new?.status === "invited") {
-          showToast("info", "Nueva invitación", "Te invitaron a una sala. Revisa la pestaña Invitaciones.");
+  roomsChannel = supabase
+    .channel(`rooms-live-${myUserId}`)
+    .on("postgres_changes", { event: "*", schema: "public", table: "room_members" }, scheduleSync)
+    .on("postgres_changes", { event: "*", schema: "public", table: "rooms" }, scheduleSync)
+    .subscribe();
+  // Respaldo: si Realtime falla o se durmió la pestaña, igual converge.
+  setInterval(() => {
+    if (!document.hidden && (listViewVisible() || currentRoom)) scheduleSync();
+  }, 30000);
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) scheduleSync();
+  });
+  window.addEventListener("online", scheduleSync);
+}
+
+async function syncRooms() {
+  if (!myUserId) return;
+  if (syncing) {
+    syncAgain = true;
+    return;
+  }
+  syncing = true;
+  try {
+    // Foto de "antes"
+    const prevRooms = new Map(allRooms.map((r) => [r.id, r]));
+    const prevRole = new Map(allRooms.map((r) => [r.id, roleIn(r)]));
+    const prevPending = new Map(allRooms.filter((r) => r.created_by === myUserId).map((r) => [r.id, new Set(allMembers.filter((m) => m.room_id === r.id && m.status === "pending").map((m) => m.user_id))]));
+    const prevInRoom = currentRoom ? prevRole.get(currentRoom.id) : null;
+
+    await loadRoomsData();
+    const sig = dataSignature();
+    if (sig === lastSig) return; // nada cambió: no se toca la pantalla
+    lastSig = sig;
+
+    /* --- avisos --- */
+    for (const r of allRooms) {
+      const now = roleIn(r);
+      const was = prevRole.get(r.id);
+      if (now === "invited" && was !== "invited") {
+        showToast("info", "Nueva invitación", `Te invitaron a «${r.name}». Revisa la pestaña Invitaciones.`);
+      } else if (now === "approved" && was === "pending") {
+        showToast("success", "¡Te aprobaron!", `Ya puedes entrar a «${r.name}».`);
+      }
+      if (r.created_by === myUserId) {
+        const before = prevPending.get(r.id) || new Set();
+        const fresh = allMembers.filter((m) => m.room_id === r.id && m.status === "pending" && !before.has(m.user_id));
+        if (fresh.length) {
+          await ensureProfiles(fresh.map((m) => m.user_id));
+          const names = fresh.map((m) => profileName(m.user_id)).join(", ");
+          showToast("info", "Nueva solicitud", `${names} quiere${fresh.length > 1 ? "n" : ""} unirse a «${r.name}».`);
         }
+      }
+    }
+    for (const [id, r] of prevRooms) {
+      if (allRooms.some((x) => x.id === id)) continue;
+      const was = prevRole.get(id);
+      if (was === "approved" || was === "invited" || was === "pending") {
+        showToast("info", "Sala no disponible", `«${r.name}» fue eliminada o ya no tienes acceso.`);
+      }
+    }
+    for (const r of allRooms) {
+      const was = prevRole.get(r.id);
+      const now = roleIn(r);
+      if (was === "approved" && !hasAccess(now)) {
+        showToast("error", "Te removieron de la sala", `«${r.name}»`);
+      } else if (was === "pending" && now === null) {
+        showToast("info", "Solicitud rechazada", `El anfitrión no aceptó tu solicitud para «${r.name}».`);
+      } else if (was === "invited" && now === null) {
+        showToast("info", "Invitación cancelada", `Ya no tienes invitación a «${r.name}».`);
+      }
+    }
+
+    /* --- lo que esté abierto --- */
+    if (currentRoom) {
+      const room = allRooms.find((r) => r.id === currentRoom.id);
+      const now = room ? roleIn(room) : null;
+      const gone = !room || (hasAccess(prevInRoom) && !hasAccess(now)) || (!hasAccess(prevInRoom) && now === null);
+      if (gone) {
+        RoomCall.leave(); // si estaba en la llamada, sale
+        closeRoomDetail();
         if (listViewVisible()) {
-          await loadRoomsData();
           renderTabs();
           renderRoomsList();
         }
-      },
-    )
-    .subscribe();
+        return;
+      }
+      currentRoom = room;
+      if (!hasAccess(prevInRoom) && hasAccess(now)) {
+        await openRoom(room.id); // te aprobaron / aceptaste: aparecen el chat y la llamada
+      } else {
+        await refreshRoomDetail();
+      }
+    }
+    if (listViewVisible()) {
+      renderTabs();
+      renderRoomsList();
+    }
+  } catch (e) {
+    console.error("QUANTIS: error sincronizando salas:", e);
+  } finally {
+    syncing = false;
+    if (syncAgain) {
+      syncAgain = false;
+      scheduleSync();
+    }
+  }
 }
 
-// [window] onclick="requestJoinRoom('id')"
-export async function requestJoinRoom(roomId) {
-  const supabase = await getSupabase();
-  const { error } = await supabase
-    .from("room_members")
-    .insert({ room_id: roomId, user_id: myUserId, status: "pending" });
-  if (error) {
-    showToast("error", "No se pudo enviar la solicitud", error.message);
-    return;
-  }
-  showToast("success", "Solicitud enviada", "El admin de la sala debe aprobarla.");
-  await loadRoomsData();
-  renderRoomsList();
+/** Refresca SOLO lo que depende de los miembros de la sala abierta (listas de
+ * solicitudes, participantes e invitaciones) y la zona de solicitudes de la
+ * llamada. No toca el chat ni la llamada en curso. */
+async function refreshRoomDetail() {
+  const room = currentRoom;
+  if (!room) return;
+  detailMembers = allMembers.filter((m) => m.room_id === room.id);
+  if (room.created_by !== myUserId) return;
+  await ensureProfiles(detailMembers.map((m) => m.user_id));
+  const lists = document.getElementById("room-admin-lists");
+  if (lists) lists.innerHTML = adminListsHTML(room, detailMembers);
+  const inv = document.getElementById("room-invited-sec");
+  if (inv) inv.innerHTML = invitedSecHTML(room, detailMembers);
+  RoomCall.notifyRequestsChanged();
 }
 
 /* ---------------- Crear sala ---------------- */
@@ -640,7 +770,7 @@ export async function sendInvites(roomId) {
     showToast("success", "Invitaciones enviadas", `${chosen.length} usuario${chosen.length === 1 ? "" : "s"}`);
   }
   resetPicker("detail");
-  openRoom(roomId);
+  await syncRooms();
 }
 
 // [window] onclick="cancelInvite('roomId','userId')"
@@ -651,7 +781,7 @@ export async function cancelInvite(roomId, userId) {
     showToast("error", "No se pudo cancelar la invitación", error.message);
     return;
   }
-  openRoom(roomId);
+  await syncRooms();
 }
 
 // [window] onclick="acceptInvite('roomId')"
@@ -690,6 +820,11 @@ export async function declineInvite(roomId) {
 
 // [window] onclick="openRoom('id')"
 export async function openRoom(roomId) {
+  // Con una llamada en curso el detalle NO se reconstruye (movería el chat y duplicaría ids): solo se refrescan las listas.
+  if (RoomCall.isInCall() && currentRoom && currentRoom.id === roomId) {
+    await refreshRoomDetail();
+    return;
+  }
   profilesCache.clear();
   const room = allRooms.find((r) => r.id === roomId);
   if (!room) return;
@@ -744,18 +879,11 @@ function renderInviteScreen(room) {
     </div>`;
 }
 
-function renderRoomDetail(room, members, isOwner, myStatus) {
-  if (myStatus === "invited") {
-    renderInviteScreen(room);
-    return;
-  }
+/** Tarjetas "Solicitudes pendientes" y "Participantes" del admin (se re-pintan solas). */
+function adminListsHTML(room, members) {
   const pending = members.filter((m) => m.status === "pending");
   const approved = members.filter((m) => m.status === "approved");
-  const invited = members.filter((m) => m.status === "invited");
-
-  let adminHTML = "";
-  if (isOwner) {
-    adminHTML = `
+  return `
       <div class="card">
         <div class="ct">Solicitudes pendientes (${pending.length})</div>
         ${
@@ -788,26 +916,40 @@ function renderRoomDetail(room, members, isOwner, myStatus) {
                 .join("")
             : `<div class="empty" style="padding:14px">Todavía nadie aprobado</div>`
         }
-      </div>
+      </div>`;
+}
+
+/** Invitaciones sin responder (dentro de la tarjeta "Invitar usuarios"). */
+function invitedSecHTML(room, members) {
+  const invited = members.filter((m) => m.status === "invited");
+  if (!invited.length) return "";
+  return `<div class="ct" style="margin-top:16px">Invitaciones sin responder (${invited.length})</div>` +
+    invited
+      .map(
+        (m) => `<div class="jf">
+        <div class="jfl who">${userAvatar(m.user_id, "sm")}${escapeHTML(profileName(m.user_id))}</div>
+        <button class="btn btn-sm btn-d" onclick="cancelInvite('${room.id}','${m.user_id}')">Cancelar</button>
+      </div>`,
+      )
+      .join("");
+}
+
+function renderRoomDetail(room, members, isOwner, myStatus) {
+  if (myStatus === "invited") {
+    renderInviteScreen(room);
+    return;
+  }
+  let adminHTML = "";
+  if (isOwner) {
+    adminHTML = `
+      <div id="room-admin-lists">${adminListsHTML(room, members)}</div>
       <div class="card">
         <div class="ct">Invitar usuarios</div>
         <input type="text" id="invite-search-detail" placeholder="Buscar usuarios de Quantis por nombre o correo..." autocomplete="off" oninput="searchInviteUsers('detail', this.value)" />
         <div id="invite-results-detail" class="invite-results"></div>
         <div id="invite-chips-detail" class="invite-chips"></div>
         <button class="btn btn-p btn-sm" style="margin-top:10px" onclick="sendInvites('${room.id}')">Enviar invitaciones</button>
-        ${
-          invited.length
-            ? `<div class="ct" style="margin-top:16px">Invitaciones sin responder (${invited.length})</div>` +
-              invited
-                .map(
-                  (m) => `<div class="jf">
-              <div class="jfl who">${userAvatar(m.user_id, "sm")}${escapeHTML(profileName(m.user_id))}</div>
-              <button class="btn btn-sm btn-d" onclick="cancelInvite('${room.id}','${m.user_id}')">Cancelar</button>
-            </div>`,
-                )
-                .join("")
-            : ""
-        }
+        <div id="room-invited-sec">${invitedSecHTML(room, members)}</div>
       </div>
       <button class="btn btn-d btn-sm" onclick="deleteRoom('${room.id}')">Eliminar sala</button>`;
   }
@@ -873,6 +1015,13 @@ export async function startAudioCall(roomId) {
     hostId: room.created_by,
     myUserId,
     canShare: room.screen_share_policy !== "host" || room.created_by === myUserId,
+    isHost: room.created_by === myUserId,
+    getRequests: () =>
+      detailMembers
+        .filter((m) => m.status === "pending")
+        .map((m) => ({ ...(profilesCache.get(m.user_id) || {}), id: m.user_id })),
+    approve: (userId) => approveMember(roomId, userId),
+    reject: (userId) => kickMember(roomId, userId, true),
     getUser: (id) => profilesCache.get(id),
     ensureUsers: ensureProfiles,
     mountChat: (slot) => {
@@ -916,7 +1065,7 @@ export async function approveMember(roomId, userId) {
     return;
   }
   showToast("success", "Usuario aprobado", "");
-  openRoom(roomId);
+  await syncRooms();
 }
 
 // [window] onclick="kickMember(roomId, userId, isReject)"
@@ -933,8 +1082,15 @@ export async function kickMember(roomId, userId, isReject) {
     showToast("error", "No se pudo completar", error.message);
     return;
   }
+  if (!isReject) {
+    // Expulsar de verdad: también se le saca de la llamada de LiveKit si está dentro.
+    supabase.functions.invoke("create-livekit-token", { body: { action: "remove", room_id: roomId, user_id: userId } }).then(
+      () => {},
+      () => {},
+    );
+  }
   showToast("success", isReject ? "Solicitud rechazada" : "Usuario expulsado", "");
-  openRoom(roomId);
+  await syncRooms();
 }
 
 // [window] onclick="leaveRoom(roomId)"
@@ -962,6 +1118,8 @@ export async function deleteRoom(roomId) {
   const supabase = await getSupabase();
   // Primero los archivos: una vez borrada la sala ya no habría permiso para quitarlos.
   await purgeRoomFiles(roomId);
+  // Y se cierra la llamada de LiveKit: quien esté dentro queda desconectado.
+  await supabase.functions.invoke("create-livekit-token", { body: { action: "close", room_id: roomId } }).catch(() => {});
   const { error } = await supabase.from("rooms").delete().eq("id", roomId);
   if (error) {
     showToast("error", "No se pudo eliminar la sala", error.message);
