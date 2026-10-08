@@ -294,35 +294,70 @@
     </div>
 
     <div class="modal-bg" id="modal-room">
-      <div class="modal">
-        <div class="modal-title">Nueva sala</div>
+      <div class="modal" style="width: 560px">
+        <div class="modal-title">Crear sala</div>
         <div class="fg">
-          <label>Nombre de la sala</label
-          ><input
-            type="text"
-            id="room-nombre"
-            placeholder="Análisis EURUSD - Londres"
-          />
+          <label>Nombre de la sala</label>
+          <input type="text" id="room-nombre" maxlength="80" placeholder="Análisis EURUSD - Londres" />
         </div>
         <div class="fg">
-          <label>Descripción (opcional)</label
-          ><textarea
-            id="room-desc"
-            placeholder="Revisión de gráficos y plan de trading para la sesión..."
-          ></textarea>
+          <label>Descripción (opcional)</label>
+          <textarea id="room-desc" maxlength="300" placeholder="Revisión de gráficos y plan de trading para la sesión..."></textarea>
         </div>
         <div class="fg">
-          <label>Visibilidad</label
-          ><select id="room-visibilidad">
-            <option value="true">Pública (visible para todos)</option>
-            <option value="false">Privada (solo quien tú apruebes)</option>
+          <label>Tipo de sala</label>
+          <div class="room-type-opts" id="room-type-opts">
+            <button type="button" class="room-type-opt active" data-val="false" onclick="setRoomType(false)">
+              <span class="material-symbols-outlined">lock</span>
+              <span><b>Privada</b><small>Solo invitados</small></span>
+            </button>
+            <button type="button" class="room-type-opt" data-val="true" onclick="setRoomType(true)">
+              <span class="material-symbols-outlined">public</span>
+              <span><b>Pública</b><small>Visible para todos</small></span>
+            </button>
+          </div>
+        </div>
+        <div class="fg-grid3">
+          <div class="fg">
+            <label>Fecha (opcional)</label>
+            <input type="date" id="room-fecha" />
+          </div>
+          <div class="fg">
+            <label>Hora (Colombia)</label>
+            <input type="time" id="room-hora" />
+          </div>
+          <div class="fg">
+            <label>Duración</label>
+            <select id="room-duracion">
+              <option value="0">Sin definir</option>
+              <option value="30">30 min</option>
+              <option value="60">1 hora</option>
+              <option value="90">1 h 30 min</option>
+              <option value="120">2 horas</option>
+              <option value="180">3 horas</option>
+            </select>
+          </div>
+        </div>
+        <div class="fg">
+          <label>Etiquetas (máx. 3, separadas por coma)</label>
+          <input type="text" id="room-tags" placeholder="Análisis, EURUSD, M15" />
+        </div>
+        <div class="fg">
+          <label>Permisos</label>
+          <select id="room-share-policy">
+            <option value="all">Todos pueden compartir pantalla</option>
+            <option value="host">Solo yo (anfitrión) comparto pantalla</option>
           </select>
         </div>
-        <div style="display: flex; gap: 8px; margin-top: 6px">
-          <button class="btn btn-p" onclick="saveRoom()">Crear sala</button>
-          <button class="btn" onclick="closeModal('modal-room')">
-            Cancelar
-          </button>
+        <div class="fg">
+          <label>Invitar usuarios</label>
+          <input type="text" id="invite-search-create" placeholder="Buscar usuarios de Quantis por nombre o correo..." autocomplete="off" oninput="searchInviteUsers('create', this.value)" />
+          <div id="invite-results-create" class="invite-results"></div>
+          <div id="invite-chips-create" class="invite-chips"></div>
+        </div>
+        <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 6px">
+          <button class="btn" onclick="closeModal('modal-room')">Cancelar</button>
+          <button class="btn btn-p" id="btn-save-room" onclick="saveRoom()">Crear sala</button>
         </div>
       </div>
     </div>
@@ -2590,15 +2625,21 @@
                 gap: 10px;
               "
             >
-              <div id="rooms-tabs" style="display: flex; gap: 6px"></div>
-              <button
-                class="btn btn-p"
-                id="btn-nueva-sala"
-                style="display: none"
-                onclick="openModal('modal-room')"
-              >
-                + Nueva sala
-              </button>
+              <div id="rooms-tabs" class="seg"></div>
+              <div class="rooms-toolbar-right">
+                <div class="rooms-search">
+                  <span class="material-symbols-outlined">search</span>
+                  <input type="search" id="rooms-search" placeholder="Buscar salas..." oninput="filterRooms(this.value)" />
+                </div>
+                <button
+                  class="btn btn-p"
+                  id="btn-nueva-sala"
+                  style="display: none"
+                  onclick="openCreateRoomModal()"
+                >
+                  <span class="material-symbols-outlined">add</span> Crear sala
+                </button>
+              </div>
             </div>
             <div id="salas-list"></div>
           </div>
