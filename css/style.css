@@ -4513,3 +4513,19 @@ img.persp-img {
     margin-left: auto;
   }
 }
+
+/* Panel de copias en la nube: iconos Material dentro de los bloques del panel */
+.bk-last-icon .material-symbols-outlined {
+  font-size: 22px;
+}
+.bk-meta-item .material-symbols-outlined {
+  font-size: 18px;
+  color: var(--text3);
+}
+.bk-hist-head .btn {
+  text-transform: none;
+  letter-spacing: 0;
+}
+.bk-item-actions .btn {
+  white-space: nowrap;
+}
