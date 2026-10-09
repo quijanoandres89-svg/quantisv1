@@ -191,9 +191,11 @@ Object.assign(window, {
   exportBackup: Backup.exportBackup,
   importBackup: Backup.importBackup,
   restoreBackup: Backup.restoreBackup,
+  downloadBackup: Backup.downloadBackup,
+  deleteBackup: Backup.deleteBackup,
+  createManualBackup: Backup.createManualBackup,
+  renderBackups: Backup.renderBackups,
   toggleBackupHistory: Backup.toggleBackupHistory,
-  toggleBackupMenu: Backup.toggleBackupMenu,
-  downloadSingleBackup: Backup.downloadSingleBackup,
   // plantillas
   savePlantilla: Plantillas.savePlantilla,
   deletePlantilla: Plantillas.deletePlantilla,
@@ -324,7 +326,6 @@ if (window.Chart) {
 // --- Arranque ---
 Theme.applySavedTheme(); // antes: IIFE de tema al cargar script.js
 IZ.initPasteHandler(); // listener de pegar (Ctrl+V) en el formulario de registro
-Backup.initBackupMenuAutoClose(); // cierra el menú de 3 puntos del panel de backups al hacer click afuera
 init();
 
 // --- PWA: registra el service worker (app shell cacheado, instalable) ---
