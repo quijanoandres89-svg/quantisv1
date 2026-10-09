@@ -18,16 +18,30 @@ import { showToast } from "./toast.js";
 import * as ImageStore from "./imageStore.js";
 
 /**
- * Resuelve qué riskResolver de TradeEngine usar según el tipo de riesgo
- * configurado en el Challenge (Fijo o Dinámico). Único lugar donde se
- * decide esto — challengeManager.js importa esta misma función en vez
- * de reimplementarla, para que Trade y Challenge nunca queden
- * desincronizados en este cálculo.
+ * Resuelve el riesgo en USD que corresponde a CADA trade del Challenge.
+ * Único lugar donde se decide esto — todo el que arma una serie
+ * (balance, drawdown, pérdida del día, replay, reglas...) pasa por aquí.
+ *
+ * REGLA: cada trade usa SU PROPIO snapshot (el % y el tipo de riesgo que
+ * tenía el Challenge cuando se registró), no la configuración actual.
+ * Así, si cambias el riesgo de 0.5% a 1%, los trades ya registrados
+ * conservan su 0.5% y solo los nuevos usan el 1%, en TODAS las pantallas.
+ * La configuración actual del Challenge solo se usa como respaldo para un
+ * trade que no traiga snapshot.
+ *   - Fijo:     el riesgo en USD que ese trade guardó al registrarse.
+ *   - Dinámico: su % guardado aplicado al capital que había en ese momento
+ *               (el capital sigue encadenándose trade a trade).
  */
 export function challengeRiskResolver(ch) {
-  return ch.tipoRiesgo === "Dinamico"
-    ? TradeEngine.dynamicRiskResolver(ch.riesgo || 1)
-    : TradeEngine.fixedRiskResolver(ch.size, ch.riesgo || 1);
+  return (trade, capitalActual) => {
+    const snap = trade && trade.challengeSnapshot;
+    const pct = snap && snap.riesgoPorcentaje != null ? snap.riesgoPorcentaje : ch.riesgo || 1;
+    const tipo = (snap && snap.tipoRiesgo) || ch.tipoRiesgo || "Fijo";
+    if (tipo === "Dinamico") return TradeEngine.riskUSD(capitalActual, pct);
+    const frozen = snap ? parseFloat(snap.riesgoUSD) : NaN;
+    if (Number.isFinite(frozen)) return frozen;
+    return TradeEngine.riskUSD((snap && snap.capitalInicial) || ch.size, pct);
+  };
 }
 
 /**
