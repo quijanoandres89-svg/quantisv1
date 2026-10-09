@@ -24,7 +24,7 @@
 import { trades, journals, challenges, plantillas, ruleSets, load, resetServerState } from "./state.js";
 import * as Backup from "./backup.js";
 import * as ImageStore from "./imageStore.js";
-import { queueToastAfterReload } from "./toast.js";
+import { queueToastAfterReload, showToast } from "./toast.js";
 import * as Instruments from "./instruments.js";
 import { getMyProfile, saveMyDisplayName, ROLE_LABEL } from "./admin.js";
 import { updateSessionDisplayName } from "./auth.js";
@@ -112,7 +112,7 @@ function renderSettingsNav() {
 function renderBackupsSection(container) {
   container.innerHTML = `
     <div class="settings-section-title">Copias de seguridad</div>
-    <div class="settings-section-sub">Backups automáticos y manuales de todos tus datos.</div>
+    <div class="settings-section-sub">Copias de todos tus datos guardadas en la nube: una automática por día (las últimas 7) y las que crees tú. Aparecen igual en todos tus dispositivos.</div>
     <div class="card-bk">
       <div id="backup-panel"></div>
     </div>
@@ -121,15 +121,15 @@ function renderBackupsSection(container) {
       <div class="fg" style="flex:1;min-width:220px">
         <label>Exportar todo</label>
         <p style="font-size:12px;color:var(--text2);margin:4px 0 10px;line-height:1.6">
-          Descarga un JSON con trades, journals, challenges y plantillas. Ideal para cambiar de computador o navegador.
+          Descarga un JSON con todos tus datos (trades, journals, EOD, challenges, plantillas, reglas e instrumentos). Las capturas de pantalla ya están guardadas en la nube.
         </p>
         <button class="btn btn-p" onclick="exportBackup()">Descargar backup JSON</button>
       </div>
       <div class="fg" style="flex:1;min-width:220px">
         <label>Importar backup</label>
         <p style="font-size:12px;color:var(--text2);margin:4px 0 10px;line-height:1.6">
-          Selecciona un archivo JSON exportado antes.
-          <strong style="color:var(--red)">Reemplazará todos los datos actuales.</strong>
+          Selecciona un archivo JSON exportado antes. Verás un resumen de lo que cambia y,
+          <strong>antes de reemplazar tus datos, se guarda una copia automática</strong> para poder deshacerlo.
         </p>
         <input type="file" id="backup-file" accept=".json" onchange="importBackup(this)" />
       </div>
@@ -249,8 +249,8 @@ function renderAboutSection(container) {
       trades.
     </div>
     <div class="settings-about-block ok">
-      <strong>Respaldo:</strong> Se genera un backup automático diario
-      (últimos 5) y puedes exportar/importar un backup completo, o generar
+      <strong>Respaldo:</strong> Se genera un backup automático diario en la nube
+      (últimos 7) y puedes exportar/importar un backup completo, o generar
       reportes en PDF/CSV, desde las secciones de esta misma Configuración.
     </div>
     <div class="settings-section-title" style="font-size:13px;margin-top:22px">Datos detectados en este navegador</div>
@@ -298,9 +298,13 @@ function renderResetSection(container) {
       <li>Plantillas de setup (<strong>${plantillas.length}</strong>)</li>
       <li>Conjuntos de reglas (<strong>${ruleSets.length}</strong>)</li>
       <li>Pares e instrumentos personalizados (vuelve a los 3 por defecto: EURUSD, XAUUSD, GBPUSD)</li>
-      <li>Backups automáticos guardados en este navegador</li>
+      <li>Copias antiguas guardadas en este navegador (las copias de la nube no se borran: puedes eliminarlas desde "Copias de seguridad")</li>
       <li>Preferencias (tema claro/oscuro)</li>
     </ul>
+    <label class="cli" style="border:none;padding:0 0 10px">
+      <input type="checkbox" id="reset-backup-check" checked />
+      <span class="clt">Guardar una copia de seguridad en la nube antes de restablecer (recomendado). Recuperarás todos tus datos desde "Copias de seguridad", pero las <strong>capturas de pantalla sí se borran</strong> y no se pueden recuperar.</span>
+    </label>
     <label class="cli" style="border:none;padding:0 0 18px">
       <input type="checkbox" id="reset-confirm-check" onchange="toggleResetButton()" />
       <span class="clt">Entiendo que esta acción es permanente y no se puede deshacer.</span>
@@ -323,6 +327,24 @@ export async function confirmResetQuantis() {
   if (btn) {
     btn.disabled = true;
     btn.textContent = "Restableciendo…";
+  }
+
+  // Copia previa en la nube (si está marcada). Si no se puede crear, NO se borra nada:
+  // el usuario decide si continuar sin copia desmarcando la opción.
+  if (document.getElementById("reset-backup-check")?.checked) {
+    const safety = await Backup.createCloudBackup("pre_reset", "Antes de restablecer QUANTIS");
+    if (!safety) {
+      showToast(
+        "error",
+        "No se pudo guardar la copia previa",
+        "No se borró nada. Revisa tu conexión, o desmarca la opción de copia si quieres restablecer sin ella.",
+      );
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = "Restablecer QUANTIS";
+      }
+      return;
+    }
   }
 
   let serverOk = true;
