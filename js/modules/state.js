@@ -481,7 +481,7 @@ const COLLECTION_REF = {
 
 /** Sube solo la colección que cambió, fusionando con el servidor si
  * otro PC (misma cuenta) escribió de por medio en vez de pisarlo. */
-async function syncStateToServer(changedKey) {
+async function doSyncStateToServer(changedKey) {
   try {
     const server = await fetchServerState();
 
@@ -577,6 +577,19 @@ function safeSetItem(key, value) {
   }
 }
 
+/** Los guardados en la nube se ejecutan UNO TRAS OTRO, nunca en paralelo.
+ * Cada guardado lee el estado completo del servidor, cambia SU colección y
+ * lo vuelve a escribir entero; si dos corrían a la vez (ej. importar un
+ * backup lanza 4 seguidos), ambos leían la misma foto vieja y el último en
+ * escribir borraba lo que el otro acababa de guardar. En fila, cada uno
+ * parte de lo que dejó el anterior. */
+let syncChain = Promise.resolve();
+function syncStateToServer(changedKey) {
+  const run = () => doSyncStateToServer(changedKey); // doSync captura sus propios errores
+  syncChain = syncChain.then(run, run);
+  return syncChain;
+}
+
 export function saveTrades() {
   const ok = safeSetItem(TK, JSON.stringify(trades));
   syncStateToServer("trades");
@@ -616,4 +629,79 @@ export function saveInstruments() {
   const ok = safeSetItem(IK, JSON.stringify(instruments));
   syncStateToServer("instruments");
   return ok;
+}
+
+/* ============================================================
+   FOTO COMPLETA DEL ESTADO + REEMPLAZO ATÓMICO
+   (usados por las copias de seguridad: crear, exportar, restaurar
+   e importar). Cubren las 8 colecciones — antes los backups solo
+   incluían 4 y dejaban fuera EOD, frenos, reglas e instrumentos.
+   ============================================================ */
+
+export const STATE_KEYS = [
+  "trades",
+  "journals",
+  "eodEntries",
+  "frenoLog",
+  "challenges",
+  "plantillas",
+  "ruleSets",
+  "instruments",
+];
+const OBJECT_KEYS = new Set(["journals", "eodEntries"]);
+
+/** Copia independiente de TODAS las colecciones tal como están ahora. */
+export function snapshotState() {
+  const snap = {};
+  for (const k of STATE_KEYS) snap[k] = clone(COLLECTION_REF[k]());
+  return snap;
+}
+
+/** Cuántos elementos hay en cada colección presente (para resúmenes y vistas previas). */
+export function countState(snap) {
+  const counts = {};
+  for (const k of STATE_KEYS) {
+    if (!(k in snap)) continue;
+    const v = snap[k];
+    counts[k] = Array.isArray(v) ? v.length : v && typeof v === "object" ? Object.keys(v).length : 0;
+  }
+  return counts;
+}
+
+/** Valida la forma de un snapshot (o de uno parcial). Devuelve null si está bien, o el motivo. */
+export function validateSnapshot(snap) {
+  if (!snap || typeof snap !== "object" || Array.isArray(snap)) return "El archivo no tiene el formato esperado.";
+  const present = STATE_KEYS.filter((k) => k in snap);
+  if (!present.length) return "El archivo no contiene datos de QUANTIS.";
+  for (const k of present) {
+    const v = snap[k];
+    if (OBJECT_KEYS.has(k)) {
+      if (!v || typeof v !== "object" || Array.isArray(v)) return `"${k}" debería ser un objeto.`;
+    } else if (!Array.isArray(v)) {
+      return `"${k}" debería ser una lista.`;
+    }
+  }
+  return null;
+}
+
+/**
+ * Reemplaza las colecciones que traiga `snap` (las que no traiga NO se tocan)
+ * de forma atómica: primero espera a que terminen los guardados pendientes,
+ * escribe TODO en la nube de una sola vez, y SOLO si eso salió bien actualiza
+ * lo local. Si la nube falla, no se toca nada y se lanza el error, así nunca
+ * queda "restaurado a medias" ni distinto entre este equipo y la nube.
+ */
+export async function replaceAllState(snap) {
+  const problem = validateSnapshot(snap);
+  if (problem) throw new Error(problem);
+  await syncChain; // que no haya un guardado viejo a medias escribiendo encima
+  const server = await fetchServerState();
+  for (const k of STATE_KEYS) if (k in snap) server[k] = clone(snap[k]);
+  server.version = server.version || SERVER_STATE_VERSION;
+  await postServerState(server);
+  const clean = {};
+  for (const k of STATE_KEYS) if (k in snap) clean[k] = snap[k];
+  // applyServerState ignora "instruments" vacío (significa "usa los de fábrica"): se respeta.
+  applyServerState(clean);
+  saveLocalState();
 }
