@@ -49,9 +49,6 @@ export function calcChProgress(ch) {
     challengeRiskResolver(ch),
   );
   const last = series[series.length - 1];
-  const riskUSD = last
-    ? last.riskUSD
-    : TradeEngine.riskUSD(ch.size, ch.riesgo || 1);
   const netRR = TradeEngine.netRR(chTrades);
   const netUSD = last ? last.balanceDespues - ch.size : 0;
   const targetUSD = (ch.size * parseFloat(ch.target)) / 100;
@@ -76,6 +73,12 @@ export function calcChProgress(ch) {
   const failed = totalLossPct >= parseFloat(ch.maxTotal);
   const completed = pct >= 100;
   const balance = last ? last.balanceDespues : ch.size;
+  // Riesgo del PRÓXIMO trade: sale de la configuración vigente del Challenge
+  // (no del último trade, que puede haberse registrado con otro %).
+  const riskUSD =
+    ch.tipoRiesgo === "Dinamico"
+      ? TradeEngine.riskUSD(balance, ch.riesgo || 1)
+      : TradeEngine.riskUSD(ch.size, ch.riesgo || 1);
   const dd = TradeEngine.drawdown(series);
   return {
     netRR,
@@ -414,7 +417,17 @@ export function saveChallenge() {
     }
     closeModal("modal-ch");
     renderChallenges();
-    showToast("success", "Challenge actualizado", ch.nombre);
+    const riskChanged = old.riesgo !== ch.riesgo || (old.tipoRiesgo || "Fijo") !== ch.tipoRiesgo;
+    const done = trades.filter((t) => t.challengeSnapshot?.challengeId === ch.id).length;
+    if (riskChanged && done > 0) {
+      showToast(
+        "success",
+        "Challenge actualizado",
+        `${ch.nombre} · Nuevo riesgo: ${ch.riesgo}% (${ch.tipoRiesgo === "Dinamico" ? "Dinámico" : "Fijo"}). Aplica a los próximos trades; los ${done} ya registrados conservan su riesgo original.`,
+      );
+    } else {
+      showToast("success", "Challenge actualizado", ch.nombre);
+    }
   } else {
     if (!challenges.length) ch.active = true;
     challenges.push(ch);
