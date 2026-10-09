@@ -726,6 +726,17 @@
               <path d="M16 3.13a4 4 0 010 7.75" /></svg
             >Salas
           </button>
+          <button class="ni" onclick="go('perspectivas', this)">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
+              <polyline points="16 7 22 7 22 13" /></svg
+            >Perspectivas
+          </button>
           <button
             class="ni"
             id="nav-admin"
@@ -2653,6 +2664,15 @@
         </div>
 
         <!-- ADMINISTRACIÓN (solo superadmin) -->
+        <!-- PERSPECTIVAS -->
+        <div class="page" id="page-perspectivas">
+          <div class="pt">Perspectivas</div>
+          <div class="ps">
+            Comparte lo que ves en el mercado con toda la comunidad de Quantis
+          </div>
+          <div id="persp-root"></div>
+        </div>
+
         <div class="page" id="page-admin">
           <div class="pt">Administración</div>
           <div class="ps">
