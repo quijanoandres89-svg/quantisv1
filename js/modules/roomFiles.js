@@ -50,11 +50,11 @@ async function decodeImage(file) {
 }
 
 /** Devuelve { blob, name, type, size, kind } o lanza Error con mensaje para el usuario. */
-export async function prepareFile(file) {
+export async function prepareFile(file, { imagesOnly = false } = {}) {
   const isPdf = file.type === "application/pdf";
   const isImg = /^image\/(png|jpe?g|webp)$/.test(file.type);
-  if (!isPdf && !isImg) {
-    throw new Error("Solo se pueden enviar imágenes (PNG, JPG, WebP) o PDF.");
+  if (imagesOnly ? !isImg : !isPdf && !isImg) {
+    throw new Error(imagesOnly ? "Solo se pueden subir imágenes (PNG, JPG o WebP)." : "Solo se pueden enviar imágenes (PNG, JPG, WebP) o PDF.");
   }
   if (isPdf) {
     if (file.size > MAX_PDF) throw new Error("El PDF pesa más de 10 MB.");
@@ -101,8 +101,7 @@ export async function prepareFile(file) {
 /* ---------------- Subir ---------------- */
 
 export async function uploadRoomFile(roomId, userId, prepared) {
-  const ext =
-    prepared.type === "application/pdf" ? "pdf" : prepared.type === "image/webp" ? "webp" : prepared.type === "image/png" ? "png" : "jpg";
+  const ext = extFor(prepared.type);
   const unique = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
   const path = `${roomId}/${userId}/${unique}.${ext}`;
   const supabase = await getSupabase();
@@ -120,19 +119,36 @@ export async function uploadRoomFile(roomId, userId, prepared) {
 
 /* ---------------- URLs firmadas ---------------- */
 
-async function signedUrls(paths) {
+/** URLs firmadas (1 h) de varias rutas de un bucket, con caché. Devuelve un array en el mismo orden. */
+export async function getSignedUrls(paths, bucket = BUCKET) {
   const now = Date.now();
-  const missing = paths.filter((p) => !(urlCache.get(p)?.exp > now));
+  const key = (p) => `${bucket}:${p}`;
+  const missing = paths.filter((p) => !(urlCache.get(key(p))?.exp > now));
   if (missing.length) {
     const supabase = await getSupabase();
-    const { data, error } = await supabase.storage.from(BUCKET).createSignedUrls(missing, SIGN_SECONDS);
+    const { data, error } = await supabase.storage.from(bucket).createSignedUrls(missing, SIGN_SECONDS);
     if (error) throw error;
     for (const item of data || []) {
-      if (item.signedUrl) urlCache.set(item.path, { url: item.signedUrl, exp: now + (SIGN_SECONDS - 300) * 1000 });
+      if (item.signedUrl) urlCache.set(key(item.path), { url: item.signedUrl, exp: now + (SIGN_SECONDS - 300) * 1000 });
     }
   }
-  return paths.map((p) => urlCache.get(p)?.url || null);
+  return paths.map((p) => urlCache.get(key(p))?.url || null);
 }
+const signedUrls = (paths) => getSignedUrls(paths, BUCKET);
+
+/** Sube una imagen ya preparada (prepareFile) a la ruta indicada de cualquier bucket. */
+export async function uploadPreparedTo(bucket, path, prepared) {
+  const supabase = await getSupabase();
+  const { error } = await supabase.storage
+    .from(bucket)
+    .upload(path, prepared.blob, { contentType: prepared.type, cacheControl: "3600", upsert: false });
+  if (error) throw error;
+  return path;
+}
+
+/** Extensión para la ruta según el tipo del archivo preparado. */
+export const extFor = (type) =>
+  type === "application/pdf" ? "pdf" : type === "image/webp" ? "webp" : type === "image/png" ? "png" : "jpg";
 
 /* ---------------- Pintar adjuntos ---------------- */
 
@@ -193,26 +209,31 @@ export async function openRoomFile(path) {
   }
 }
 
-// [window] onclick="openRoomImage(path, name)" — imagen ampliada
+/** Muestra una imagen ampliada con botón de descargar. La usan Salas y Perspectivas. */
+export function showLightbox(url, name = "imagen") {
+  closeRoomLightbox();
+  const box = document.createElement("div");
+  box.className = "lightbox";
+  box.id = "room-lightbox";
+  box.innerHTML = `
+    <img src="${escapeHTML(url)}" alt="${escapeHTML(name)}" />
+    <div class="lightbox-bar">
+      <a class="btn btn-sm" href="${escapeHTML(url)}" download="${escapeHTML(name)}" target="_blank" rel="noopener">${icon("download")} Descargar</a>
+      <button class="btn btn-sm btn-icon" aria-label="Cerrar" onclick="closeRoomLightbox()">${icon("close")}</button>
+    </div>`;
+  box.addEventListener("mousedown", (e) => {
+    if (e.target === box) closeRoomLightbox();
+  });
+  document.body.appendChild(box);
+  document.addEventListener("keydown", onLightboxKey);
+}
+
+// [window] onclick="openRoomImage(path, name)" — imagen del chat ampliada
 export async function openRoomImage(path, name = "imagen") {
   try {
     const [url] = await signedUrls([path]);
     if (!url) throw new Error("No se pudo generar el enlace");
-    closeRoomLightbox();
-    const box = document.createElement("div");
-    box.className = "lightbox";
-    box.id = "room-lightbox";
-    box.innerHTML = `
-      <img src="${escapeHTML(url)}" alt="${escapeHTML(name)}" />
-      <div class="lightbox-bar">
-        <a class="btn btn-sm" href="${escapeHTML(url)}" download="${escapeHTML(name)}" target="_blank" rel="noopener">${icon("download")} Descargar</a>
-        <button class="btn btn-sm btn-icon" aria-label="Cerrar" onclick="closeRoomLightbox()">${icon("close")}</button>
-      </div>`;
-    box.addEventListener("mousedown", (e) => {
-      if (e.target === box) closeRoomLightbox();
-    });
-    document.body.appendChild(box);
-    document.addEventListener("keydown", onLightboxKey);
+    showLightbox(url, name);
   } catch (e) {
     showToast("error", "No se pudo abrir la imagen", e.message);
   }
