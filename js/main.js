@@ -45,6 +45,7 @@ import * as Auth from "./modules/auth.js";
 import * as Avatar from "./modules/avatar.js";
 import * as RoomCall from "./modules/roomCall.js";
 import * as RoomFiles from "./modules/roomFiles.js";
+import * as Perspectives from "./modules/perspectives.js";
 
 /**
  * Router de páginas: activa la página pedida en el HTML y dispara
@@ -72,6 +73,7 @@ function go(page, el) {
   if (page === "eod") Eod.renderEod();
   if (page === "admin") Admin.renderAdmin();
   if (page === "salas") Rooms.renderRooms();
+  if (page === "perspectivas") Perspectives.renderPerspectives();
   if (page === "stats") Statistics.renderStats();
   if (page === "journal") JournalManager.initJournal();
   if (page === "reporte") Statistics.renderReporte();
@@ -271,6 +273,20 @@ Object.assign(window, {
   cancelInvite: Rooms.cancelInvite,
   acceptInvite: Rooms.acceptInvite,
   declineInvite: Rooms.declineInvite,
+  setPerspKind: Perspectives.setPerspKind,
+  onPerspInput: Perspectives.onPerspInput,
+  pickPerspImage: Perspectives.pickPerspImage,
+  onPerspImageChosen: Perspectives.onPerspImageChosen,
+  handlePerspPaste: Perspectives.handlePerspPaste,
+  clearPerspImage: Perspectives.clearPerspImage,
+  publishPerspective: Perspectives.publishPerspective,
+  filterPerspKind: Perspectives.filterPerspKind,
+  filterPerspPair: Perspectives.filterPerspPair,
+  loadMorePerspectives: Perspectives.loadMorePerspectives,
+  togglePerspLike: Perspectives.togglePerspLike,
+  deletePerspective: Perspectives.deletePerspective,
+  openPerspImage: Perspectives.openPerspImage,
+  showNewPerspectives: Perspectives.showNewPerspectives,
   pickRoomFile: Rooms.pickRoomFile,
   onRoomFileChosen: Rooms.onRoomFileChosen,
   handleRoomPaste: Rooms.handleRoomPaste,
