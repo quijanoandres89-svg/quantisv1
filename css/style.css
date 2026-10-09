@@ -4359,3 +4359,157 @@ body.call-active {
 .call-req-sec .call-person {
   gap: 8px;
 }
+
+/* ============================================================
+   PERSPECTIVAS (Fase D) — muro de la comunidad
+   ============================================================ */
+#persp-root {
+  max-width: 760px;
+}
+.persp-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  font-size: 12px;
+  color: var(--text2);
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.persp-banner .material-symbols-outlined {
+  font-size: 20px;
+  color: var(--acc);
+}
+.persp-composer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.persp-composer .seg {
+  align-self: flex-start;
+  flex-wrap: wrap;
+}
+.persp-composer textarea {
+  min-height: 84px;
+  resize: vertical;
+}
+.persp-composer-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.persp-composer-bar select {
+  width: auto;
+  min-width: 140px;
+}
+.persp-count {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text3);
+}
+.persp-filters {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 14px 0;
+}
+.persp-filters select {
+  width: auto;
+  min-width: 150px;
+  border-radius: 999px;
+}
+.persp-pill {
+  margin: 0 auto 12px;
+  display: flex;
+}
+.persp-card {
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+.persp-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.persp-who {
+  flex: 1;
+  min-width: 120px;
+}
+.persp-name {
+  font-size: 13px;
+  font-weight: 700;
+}
+.persp-time {
+  font-size: 11px;
+  color: var(--text3);
+  font-family: var(--mono);
+}
+.persp-kind {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.persp-kind .material-symbols-outlined {
+  font-size: 14px;
+}
+.persp-kind.k-persp {
+  color: #5aa7ff;
+  background: rgba(90, 167, 255, 0.12);
+}
+.persp-kind.k-win {
+  color: var(--acc);
+  background: var(--abg);
+}
+.persp-kind.k-live {
+  color: #ffb340;
+  background: rgba(255, 179, 64, 0.12);
+}
+.persp-body {
+  margin-top: 10px;
+  font-size: 13px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+img.persp-img {
+  max-width: 100%;
+  width: auto;
+  max-height: 420px;
+  margin-top: 10px;
+}
+.persp-foot {
+  display: flex;
+  margin-top: 8px;
+}
+.persp-like {
+  color: var(--text3);
+}
+.persp-like .material-symbols-outlined {
+  font-size: 18px;
+}
+.persp-like.on {
+  color: var(--red);
+}
+.persp-like.on .material-symbols-outlined {
+  font-variation-settings: "FILL" 1;
+}
+@media (max-width: 700px) {
+  .persp-composer-bar .btn-p {
+    margin-left: auto;
+  }
+}
