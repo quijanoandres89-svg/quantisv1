@@ -62,9 +62,10 @@ async function ensureProfiles(ids) {
   const missing = [...new Set(ids)].filter((id) => id && !profilesCache.has(id));
   if (!missing.length) return;
   const supabase = await getSupabase();
+  // "public_profiles" solo expone id, nombre y foto: nadie ve el correo de los demás.
   const { data, error } = await supabase
-    .from("profiles")
-    .select("id, display_name, email, avatar_url")
+    .from("public_profiles")
+    .select("id, display_name, avatar_url")
     .in("id", missing);
   if (error) return;
   (data || []).forEach((p) => profilesCache.set(p.id, p));
@@ -72,7 +73,7 @@ async function ensureProfiles(ids) {
 
 function profileName(id) {
   const p = profilesCache.get(id);
-  return p ? p.display_name || p.email : "Usuario";
+  return p ? p.display_name || "Usuario" : "Usuario";
 }
 
 // Avatar de cualquier usuario ya cargado en profilesCache (mismo componente que el sidebar).
@@ -131,6 +132,27 @@ export function filterRooms(q) {
   renderRoomsList();
 }
 
+/** Aviso rojo en "Salas" del menú (y punto en el botón del menú en celular):
+ * invitaciones que te hicieron + solicitudes de ingreso por aprobar en tus salas. */
+function updateNavBadge() {
+  const invited = allRooms.filter((r) => myStatusFor(r.id) === "invited").length;
+  const requests = allRooms.filter((r) => r.created_by === myUserId).reduce((n, r) => n + pendingCountFor(r.id), 0);
+  const total = invited + requests;
+  const badge = document.getElementById("nav-salas-badge");
+  if (badge) {
+    badge.textContent = total > 99 ? "99+" : String(total);
+    badge.style.display = total ? "" : "none";
+    badge.title = [
+      invited ? `${invited} invitación${invited === 1 ? "" : "es"}` : "",
+      requests ? `${requests} solicitud${requests === 1 ? "" : "es"} por aprobar` : "",
+    ]
+      .filter(Boolean)
+      .join(" · ");
+  }
+  const dot = document.getElementById("menu-dot");
+  if (dot) dot.style.display = total ? "" : "none";
+}
+
 async function loadRoomsData() {
   const supabase = await getSupabase();
   const [roomsRes, membersRes, countsRes] = await Promise.all([
@@ -153,6 +175,7 @@ async function loadRoomsData() {
   allMembers = membersRes.data || [];
   approvedCounts = new Map((countsRes.data || []).map((c) => [c.room_id, c.approved_count]));
   await ensureProfiles(allRooms.map((r) => r.created_by));
+  updateNavBadge();
 }
 
 function myStatusFor(roomId) {
@@ -660,7 +683,7 @@ function renderChips(scope) {
   if (!el) return;
   el.innerHTML = [...pickers[scope].selected.values()]
     .map(
-      (p) => `<span class="invite-chip">${avatarHTML(p, "xs")}${escapeHTML(p.display_name || p.email)}
+      (p) => `<span class="invite-chip">${avatarHTML(p, "xs")}${escapeHTML(p.display_name || "Usuario")}
         <button aria-label="Quitar" onclick="toggleInviteUser('${scope}','${p.id}')">${ICON("close")}</button></span>`,
     )
     .join("");
@@ -683,10 +706,11 @@ async function runInviteSearch(scope, q) {
     return;
   }
   const supabase = await getSupabase();
+  // Solo por nombre de usuario (nunca por correo) y sobre la vista pública.
   const { data, error } = await supabase
-    .from("profiles")
-    .select("id, display_name, email, avatar_url")
-    .or(`display_name.ilike.%${term}%,email.ilike.%${term}%`)
+    .from("public_profiles")
+    .select("id, display_name, avatar_url")
+    .ilike("display_name", `%${term}%`)
     .neq("id", myUserId)
     .limit(8);
   if (error) {
@@ -700,13 +724,17 @@ async function runInviteSearch(scope, q) {
     box.innerHTML = `<div class="empty" style="padding:10px">Sin resultados</div>`;
     return;
   }
+  // Los nombres de usuario no son únicos: si dos resultados se llaman igual, se distinguen con un código corto.
+  const nameCount = new Map();
+  list.forEach((p) => nameCount.set((p.display_name || "").toLowerCase(), (nameCount.get((p.display_name || "").toLowerCase()) || 0) + 1));
   box.innerHTML = list
     .map((p) => {
       pickers[scope][`p_${p.id}`] = p; // para poder seleccionarlo después sin volver a pedirlo
       const picked = pickers[scope].selected.has(p.id);
+      const dup = nameCount.get((p.display_name || "").toLowerCase()) > 1;
       return `<button class="invite-result ${picked ? "picked" : ""}" onclick="toggleInviteUser('${scope}','${p.id}')">
         ${avatarHTML(p, "sm")}
-        <span class="invite-result-info"><span class="invite-result-name">${escapeHTML(p.display_name || p.email)}</span><span class="invite-result-mail">${escapeHTML(p.email)}</span></span>
+        <span class="invite-result-info"><span class="invite-result-name">${escapeHTML(p.display_name || "Usuario")}</span>${dup ? `<span class="invite-result-mail">homónimo · #${escapeHTML(p.id.slice(0, 4))}</span>` : ""}</span>
         ${ICON(picked ? "check_circle" : "add_circle")}
       </button>`;
     })
