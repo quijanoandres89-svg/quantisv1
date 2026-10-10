@@ -66,11 +66,7 @@ export function setDayScore(n) {
 
 // --- Timers e instancias de Chart.js (no son datos persistentes,
 //     pero varios módulos necesitan leer/limpiar la misma instancia) ---
-export let frenoTimer = null;
 export let sessionFrenoTimer = null;
-export function setFrenoTimer(id) {
-  frenoTimer = id;
-}
 export function setSessionFrenoTimer(id) {
   sessionFrenoTimer = id;
 }
