@@ -79,7 +79,7 @@ async function ensureAuthors(ids) {
   const missing = [...new Set(ids)].filter((id) => !authors.has(id));
   if (!missing.length) return;
   const supabase = await getSupabase();
-  const { data } = await supabase.from("profiles").select("id, display_name, email, avatar_url").in("id", missing);
+  const { data } = await supabase.from("public_profiles").select("id, display_name, avatar_url").in("id", missing);
   (data || []).forEach((p) => authors.set(p.id, p));
 }
 
@@ -206,7 +206,7 @@ function postHTML(p) {
     <div class="persp-head">
       ${avatarHTML(a, "md")}
       <div class="persp-who">
-        <div class="persp-name">${escapeHTML(a.display_name || a.email || "Usuario")}</div>
+        <div class="persp-name">${escapeHTML(a.display_name || "Usuario")}</div>
         <div class="persp-time" title="${escapeHTML(fullDate(p.created_at))}">${escapeHTML(timeAgo(p.created_at))}</div>
       </div>
       <span class="persp-kind ${k.cls}">${icon(k.icon)}${k.short}</span>
