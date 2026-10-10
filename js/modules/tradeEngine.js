@@ -100,17 +100,6 @@ export function equitySeries(trades, capitalInicial, riskResolver) {
   return series;
 }
 
-/** Riesgo fijo: mismo riskUSD en todos los trades (basado en capital inicial). */
-export function fixedRiskResolver(capitalInicial, riesgoPct) {
-  const rUsd = riskUSD(capitalInicial, riesgoPct);
-  return () => rUsd;
-}
-
-/** Riesgo dinámico: recalcula el riskUSD según el capital en ese momento. */
-export function dynamicRiskResolver(riesgoPct) {
-  return (_trade, capitalActual) => riskUSD(capitalActual, riesgoPct);
-}
-
 /**
  * Drawdown "corrida completa": el mismo cálculo que drawdownFromValues,
  * pero devuelve el drawdown en CADA punto de la serie (no solo el
