@@ -60,14 +60,13 @@ function userOf(p) {
   return {
     id: p.identity,
     display_name: u?.display_name || p.name || null,
-    email: u?.email || null,
     avatar_url: u?.avatar_url || null,
   };
 }
 
 function nameOf(p) {
   const u = userOf(p);
-  return u.display_name || u.email || "Participante";
+  return u.display_name || "Participante";
 }
 
 function isMicOn(p) {
@@ -297,7 +296,7 @@ function renderRequests() {
       (u) => `<div class="call-person">
         ${avatarHTML(u, "sm")}
         <div class="call-person-info">
-          <div class="call-person-name">${escapeHTML(u.display_name || u.email || "Usuario")}</div>
+          <div class="call-person-name">${escapeHTML(u.display_name || "Usuario")}</div>
           <div class="call-person-role">Quiere unirse a la sala</div>
         </div>
         <button class="btn btn-sm btn-icon btn-p" aria-label="Aprobar" data-id="${escapeHTML(u.id)}" onclick="callApprove(this.dataset.id)">${icon("check")}</button>
