@@ -65,10 +65,13 @@ export async function saveEod() {
     guardadoEn: new Date().toISOString(),
   };
 
+  const previous = eodEntries[fecha]; // el EOD que había para esta fecha (si lo había)
   eodEntries[fecha] = entry;
   const saved = saveEodEntries();
   if (!saved) {
-    delete eodEntries[fecha];
+    // Se restaura el EOD anterior: antes se borraba la fecha entera y se perdía también lo que ya estaba bien guardado.
+    if (previous) eodEntries[fecha] = previous;
+    else delete eodEntries[fecha];
     showToast(
       "error",
       "No se pudo guardar el EOD",
@@ -91,6 +94,14 @@ export async function saveEod() {
     );
   } else {
     showToast("success", "EOD guardado", fmtDate(fecha));
+    // Guardar sobre una fecha que ya tenía EOD reemplaza sus capturas: las anteriores quedaban
+    // para siempre en Storage ocupando espacio. Solo se borran si las nuevas se guardaron bien.
+    if (previous) {
+      const stillUsed = new Set(keys);
+      for (const old of [previous.imgHTF, previous.imgMTF, previous.imgLTF]) {
+        if (ImageStore.isImageKey(old) && !stillUsed.has(old)) ImageStore.deleteImage(old);
+      }
+    }
   }
 
   document.getElementById("eod-resumen-general").value = "";
