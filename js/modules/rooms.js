@@ -354,6 +354,21 @@ export function toggleRoomMenu(id, ev) {
   if (m && !wasOpen) m.classList.add("open");
 }
 
+// [window] onclick="requestJoinRoom('id')" — botón "Solicitar unirse" de las salas públicas
+export async function requestJoinRoom(roomId) {
+  const supabase = await getSupabase();
+  const { error } = await supabase
+    .from("room_members")
+    .insert({ room_id: roomId, user_id: myUserId, status: "pending" });
+  if (error) {
+    showToast("error", "No se pudo enviar la solicitud", error.message);
+    return;
+  }
+  showToast("success", "Solicitud enviada", "El anfitrión de la sala debe aprobarla. Te avisaremos cuando responda.");
+  // Al anfitrión le llega solo: su suscripción en vivo ve la fila nueva y le muestra el aviso y el contador del menú.
+  await syncRooms();
+}
+
 // [window] onclick="joinRoomNow('id')" — entra a la sala y a la llamada de una vez
 export async function joinRoomNow(roomId) {
   await openRoom(roomId);
