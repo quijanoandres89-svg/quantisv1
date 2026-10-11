@@ -223,7 +223,10 @@ Object.assign(window, {
   // mobile (Entrega 17)
   toggleSidebar,
   // settings panel (Entrega A/D)
-  openSettings: SettingsPanel.openSettings,
+  openSettings: () => {
+    closeSidebar(); // en celular/tablet el menú se oculta solo, como con las demás secciones
+    SettingsPanel.openSettings();
+  },
   closeSettings: SettingsPanel.closeSettings,
   selectSettingsSection: SettingsPanel.selectSettingsSection,
   toggleResetButton: SettingsPanel.toggleResetButton,
@@ -261,6 +264,7 @@ Object.assign(window, {
   leaveAudioCall: RoomCall.leave,
   toggleMute: RoomCall.toggleMute,
   toggleScreenShare: RoomCall.toggleScreenShare,
+  renderJournals: JournalManager.renderJournals, // buscador/filtros de "Journals previos" (oninput)
   toggleCallPanel: RoomCall.togglePanel,
   callApprove: RoomCall.approveRequest,
   callReject: RoomCall.rejectRequest,
