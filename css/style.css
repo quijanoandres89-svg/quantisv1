@@ -4386,3 +4386,32 @@ img.persp-img {
   border-radius: 50%;
   box-sizing: content-box;
 }
+
+/* ============================================================
+   CLASES ARMADAS EN TIEMPO DE EJECUCIÓN — NO BORRAR
+   Nunca aparecen escritas completas en el JS, por eso un buscador de
+   texto las cree "sin uso":
+     · .sg / .sy / .sr → dashboard.js: class="sem-sb s${s.l}" (semáforo
+       "Puedes operar" del menú; l = g, y o r)
+     · .byes / .bno    → historial.js: class="badge b${plan ? 'yes' : 'no'}"
+   ============================================================ */
+.sg {
+  background: var(--gbg);
+  border-color: var(--gbr);
+  color: var(--green);
+}
+.sy {
+  background: var(--ybg);
+  border-color: var(--ybr);
+  color: var(--yellow);
+}
+.sr {
+  background: var(--rbg);
+  border-color: var(--rbr);
+  color: var(--red);
+}
+.byes {
+  background: var(--gbg);
+  color: var(--green);
+  border: 1px solid var(--gbr);
+}
