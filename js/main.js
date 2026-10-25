@@ -327,6 +327,19 @@ if (window.Chart) {
   window.Chart.defaults.plugins.tooltip = chartTooltipStyle();
 }
 
+// --- Aviso visible si un guardado en la nube falla (antes solo iba a la consola) ---
+let lastSyncWarn = 0;
+window.addEventListener("quantis:sync-status", (e) => {
+  if (e.detail?.ok) return;
+  if (Date.now() - lastSyncWarn < 60000) return; // máx. un aviso por minuto
+  lastSyncWarn = Date.now();
+  Toast.showToast(
+    "warning",
+    "No se pudo guardar en la nube",
+    "Tus datos están a salvo en este navegador y se reintentarán al próximo guardado. Revisa tu conexión.",
+  );
+});
+
 // --- Arranque ---
 Theme.applySavedTheme(); // antes: IIFE de tema al cargar script.js
 IZ.initPasteHandler(); // listener de pegar (Ctrl+V) en el formulario de registro
