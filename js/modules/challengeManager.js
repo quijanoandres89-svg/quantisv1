@@ -11,7 +11,6 @@
 import {
   challenges,
   saveChallenges,
-  load,
   balanceC,
   ddC,
   setChart,
@@ -103,7 +102,6 @@ export function calcChProgress(ch) {
 
 // [window] onclick="go('challenge', this)" dispara esto vía go() en main.js
 export function renderChallenges() {
-  load();
   const el = document.getElementById("challenge-list");
   renderChSidebar();
   if (!challenges.length) {
