@@ -11,9 +11,19 @@ import {
   setSessionFrenoTimer,
   CL,
 } from "./state.js";
-import { today } from "./utils.js";
+import { today, nowHHMM } from "./utils.js";
 import { getSem } from "./dashboard.js";
 import { updateCL } from "./journalManager.js";
+import { scheduleSound, playSound, vibrate } from "./sounds.js";
+import { notifyUser } from "./notifier.js";
+
+// Alarma del Freno de 5 minutos, programada con el reloj de audio al iniciar (suena UNA vez, exacta,
+// aunque la pestaña esté en segundo plano y el navegador aletargue los temporizadores).
+let frenoAlarm = null;
+function cancelFrenoAlarm() {
+  if (frenoAlarm) frenoAlarm.cancel();
+  frenoAlarm = null;
+}
 
 
 const FRENO_START_HTML =
@@ -47,6 +57,7 @@ export function cerrarSesion() {
     clearInterval(sessionFrenoTimer);
     setSessionFrenoTimer(null);
   }
+  cancelFrenoAlarm();
   document.getElementById("session-timer").textContent = "5:00";
   document.getElementById("session-bar").style.width = "0%";
   document.getElementById("session-freno-btn").classList.remove("running");
@@ -73,6 +84,7 @@ export function toggleSessionFreno() {
   if (sessionFrenoTimer) {
     clearInterval(sessionFrenoTimer);
     setSessionFrenoTimer(null);
+    cancelFrenoAlarm();
     document.getElementById("session-freno-btn").classList.remove("running");
     document.getElementById("session-freno-btn").innerHTML = FRENO_START_HTML;
     document.getElementById("session-timer").textContent = "5:00";
@@ -81,6 +93,7 @@ export function toggleSessionFreno() {
   }
   const start = Date.now(),
     DUR = 300000;
+  frenoAlarm = scheduleSound("freno", DUR / 1000);
   document.getElementById("session-freno-btn").classList.add("running");
   document.getElementById("session-freno-btn").innerHTML =
     '<span class="material-symbols-outlined ico">close</span> Cancelar';
@@ -105,27 +118,22 @@ export function toggleSessionFreno() {
         document.getElementById("session-timer").textContent = "0:00";
         const entry = {
           fecha: today(),
-          hora: new Date().toLocaleTimeString("es-CO", {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
+          hora: nowHHMM(),
         };
         frenoLog.push(entry);
         saveFrenoLog();
-        try {
-          const ctx = new AudioContext();
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.connect(gain);
-          gain.connect(ctx.destination);
-          osc.frequency.setValueAtTime(880, ctx.currentTime);
-          osc.frequency.setValueAtTime(660, ctx.currentTime + 0.15);
-          osc.frequency.setValueAtTime(880, ctx.currentTime + 0.3);
-          gain.gain.setValueAtTime(0.3, ctx.currentTime);
-          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
-          osc.start(ctx.currentTime);
-          osc.stop(ctx.currentTime + 0.6);
-        } catch (e) {}
+        // La alarma ya quedó programada al iniciar y suena UNA sola vez; si no se pudo programar, suena ahora.
+        if (!frenoAlarm || !frenoAlarm.hasFired()) {
+          if (frenoAlarm) frenoAlarm.cancel(); // evita que suene dos veces si el audio se reanuda después
+          playSound("freno");
+        }
+        frenoAlarm = null;
+        vibrate([400, 200, 400, 200, 800]); // celulares
+        notifyUser({
+          title: "Freno de 5 minutos terminado",
+          body: "¿Tu setup sigue siendo válido?",
+          tag: "freno",
+        });
         document.getElementById("session-freno-msg").innerHTML =
           `<div class="alert as"><span class="material-symbols-outlined ico">check_circle</span> Completado. ¿El setup sigue siendo válido?</div>`;
         preChecks["c7"] = true;

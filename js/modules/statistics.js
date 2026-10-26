@@ -20,7 +20,6 @@ import {
   winsDistC,
   lossesDistC,
   setChart,
-  load,
   instruments,
 } from "./state.js";
 import {
@@ -1153,7 +1152,6 @@ export function renderCorrelacion() {
 
 // [window] go('comparar', ...) la dispara desde main.js
 export function renderComparar() {
-  load();
   const T = themeColors();
   const weeks = getWeeks().slice(0, 8).reverse();
   if (weeks.length < 2) {
@@ -1307,7 +1305,6 @@ export function renderComparar() {
 
 // [window] go('toptrades', ...) la dispara desde main.js
 export function renderTopTrades() {
-  load();
   const T = themeColors();
   if (!trades.length) {
     ["top-wins", "top-losses", "patterns"].forEach((id) => {

@@ -26,12 +26,16 @@ import { getSupabase } from "./supabaseClient.js";
 import { escapeHTML } from "./utils.js";
 import { showToast } from "./toast.js";
 import { avatarHTML } from "./avatar.js";
+import { playSound } from "./sounds.js";
 
 let lk = null; // instancia de LivekitClient.Room
 let ctx = null; // { roomId, roomName, hostId, myUserId, getUser, ensureUsers, mountChat, unmountChat, onClosed }
 let view = null; // elemento raíz de la vista
 let startedAt = 0;
 let timerId = null;
+// Los sonidos de "entró/salió alguien" solo suenan con la llamada ya establecida: al conectar,
+// LiveKit puede avisar de los participantes que ya estaban, y al salir, de todos los que se van.
+let callAudible = false;
 let rafId = 0;
 let stageSid = null; // sid de la pista que hoy se muestra en el escenario
 let stageVideo = null;
@@ -534,11 +538,15 @@ export async function startCall(context) {
 
     const on = (ev, fn) => lk.on(ev, fn);
     on(RoomEvent.ParticipantConnected, (p) => {
+      if (callAudible) playSound("join", { level: 0.55 }); // alguien entró (más suave que el tuyo, como en Teams)
       ctx.ensureUsers([p.identity]).then(scheduleRefresh);
       scheduleRefresh();
     });
+    on(RoomEvent.ParticipantDisconnected, () => {
+      if (callAudible) playSound("leave", { level: 0.55 }); // alguien salió
+      scheduleRefresh();
+    });
     for (const ev of [
-      RoomEvent.ParticipantDisconnected,
       RoomEvent.TrackPublished,
       RoomEvent.TrackUnpublished,
       RoomEvent.TrackMuted,
@@ -570,6 +578,8 @@ export async function startCall(context) {
     await lk.connect(data.url, data.token);
     await ctx.ensureUsers(allParticipants().map((p) => p.identity));
     view.querySelector("#call-connecting")?.remove();
+    playSound("join"); // tú entraste a la llamada
+    callAudible = true;
     startedAt = Date.now();
     timerId = setInterval(() => {
       const t = view?.querySelector("#call-timer");
@@ -600,7 +610,9 @@ export async function startCall(context) {
 export function leave() {
   const room = lk;
   lk = null; // antes de desconectar: evita que "Disconnected" vuelva a entrar aquí
+  callAudible = false;
   if (room) {
+    playSound("leave"); // tú saliste de la llamada
     try {
       room.disconnect();
     } catch {

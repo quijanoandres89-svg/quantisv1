@@ -41,6 +41,34 @@ const MERGEABLE_ID_COLLECTIONS = new Set([
 // PC escribió de por medio: en vez de pisarlo, se fusiona.
 let lastKnownServerUpdatedAt = null;
 
+// true cuando en esta sesión ya se leyó el servidor con éxito. Mientras
+// sea false, los datos locales pueden estar desactualizados: un guardado
+// NUNCA debe reemplazar la colección del servidor, solo fusionarse.
+let serverSynced = false;
+
+// Dueño (user id) de los datos guardados en este navegador. Evita que, al
+// iniciar sesión con otra cuenta en el mismo navegador, se hereden (y se
+// suban a la nube) los datos de la cuenta anterior.
+const OWNER_KEY = "quantis_local_owner";
+
+/** Compara dos fechas ISO como INSTANTES, no como texto: el servidor
+ * devuelve "...+00:00" y el cliente guarda "...Z"; son el mismo momento
+ * pero distinto texto, y con !== cada guardado creía ver un conflicto. */
+function sameInstant(a, b) {
+  if (!a || !b) return a === b;
+  const x = Date.parse(a);
+  const y = Date.parse(b);
+  if (Number.isNaN(x) || Number.isNaN(y)) return a === b;
+  return x === y;
+}
+
+/** Avisa a la UI (main.js lo muestra) si un guardado en la nube falló. */
+function emitSync(ok, key, message) {
+  try {
+    window.dispatchEvent(new CustomEvent("quantis:sync-status", { detail: { ok, key, message } }));
+  } catch (e) {}
+}
+
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
 }
@@ -368,6 +396,7 @@ async function postServerState(data) {
   if (error) throw new Error(`Supabase upsert falló: ${error.message}`);
 
   lastKnownServerUpdatedAt = nowIso;
+  serverSynced = true;
   return { success: true };
 }
 
@@ -380,12 +409,21 @@ export async function resetServerState() {
   if (!user) throw new Error("No hay sesión activa de Supabase.");
 
   const supabase = await getSupabase();
-  const { error } = await supabase
+  const { data: deleted, error } = await supabase
     .from("quantis_state")
     .delete()
-    .eq("user_id", user.id);
+    .eq("user_id", user.id)
+    .select("user_id");
 
   if (error) throw new Error(`Supabase delete falló: ${error.message}`);
+
+  // Con RLS y sin política DELETE, Supabase responde "ok" pero no borra
+  // nada. Si no volvió ninguna fila borrada, se deja la fila en blanco
+  // con una actualización (que sí está permitida) para que el reset
+  // funcione igual.
+  if (!deleted || deleted.length === 0) {
+    await postServerState(emptyServerShape());
+  }
 
   lastKnownServerUpdatedAt = null;
 }
@@ -481,10 +519,14 @@ async function doSyncStateToServer(changedKey) {
   try {
     const server = await fetchServerState();
 
+    // Hay conflicto si (a) todavía no se había leído el servidor con
+    // éxito en esta sesión (los datos locales pueden ser viejos) o (b)
+    // otro equipo escribió después de la última lectura.
     const conflict =
-      lastKnownServerUpdatedAt !== null &&
-      server.updatedAt &&
-      server.updatedAt !== lastKnownServerUpdatedAt;
+      !serverSynced ||
+      (lastKnownServerUpdatedAt !== null &&
+        !!server.updatedAt &&
+        !sameInstant(server.updatedAt, lastKnownServerUpdatedAt));
 
     const localValue = clone(COLLECTION_REF[changedKey]());
 
@@ -507,14 +549,51 @@ async function doSyncStateToServer(changedKey) {
       applyServerState({ [changedKey]: server[changedKey] });
       saveLocalState();
     }
+    emitSync(true, changedKey);
   } catch (error) {
     console.error(`QUANTIS: no se pudo sincronizar "${changedKey}" con Supabase:`, error);
+    emitSync(false, changedKey, error.message);
   }
 }
 
 /** Carga principal: primero localStorage (respaldo inmediato, sin
  * esperar red), luego Supabase como fuente de verdad entre equipos. */
-export async function load() {
+let loadPromise = null;
+
+/** Idempotente: la primera llamada carga; las siguientes (aunque sean
+ * simultáneas) reutilizan el mismo resultado y NO vuelven a bajar el
+ * servidor encima de la memoria — antes, abrir ciertas pantallas
+ * re-ejecutaba esto y podía revertir lo recién registrado. Solo se
+ * reintenta si la carga anterior no logró contactar al servidor. */
+export function load() {
+  if (!loadPromise) {
+    loadPromise = doLoad().then(
+      (ok) => {
+        if (!ok) loadPromise = null;
+        return ok;
+      },
+      (e) => {
+        loadPromise = null;
+        throw e;
+      },
+    );
+  }
+  return loadPromise;
+}
+
+async function doLoad() {
+  try {
+    const user = await getCurrentUser();
+    if (user) {
+      const owner = localStorage.getItem(OWNER_KEY);
+      if (owner && owner !== user.id) {
+        // Otra cuenta usó este navegador: sus datos locales no son de esta.
+        [TK, JK, FK, CH_KEY, PL_KEY, RS_KEY, IK, EK].forEach((k) => localStorage.removeItem(k));
+      }
+      localStorage.setItem(OWNER_KEY, user.id);
+    }
+  } catch (e) {}
+
   loadLocalState();
 
   let data;
@@ -522,18 +601,19 @@ export async function load() {
     data = await fetchServerState();
   } catch (error) {
     console.warn("QUANTIS: no se pudo contactar Supabase, se mantiene el localStorage.", error);
-    return;
+    return false;
   }
 
   try {
     data = await migrateLocalStateToServer(data);
   } catch (error) {
     console.error("QUANTIS: error en la sincronización inicial con Supabase:", error);
-    return;
+    return false;
   }
 
   applyServerState(data);
   lastKnownServerUpdatedAt = data.updatedAt || null;
+  serverSynced = true;
 
   if (instruments.length === 0) {
     instruments.push(...defaultInstruments());
@@ -541,6 +621,7 @@ export async function load() {
   }
 
   saveLocalState();
+  return true;
 }
 
 /**
@@ -586,19 +667,26 @@ function syncStateToServer(changedKey) {
   return syncChain;
 }
 
+/** Avisa al resto de la app que se guardaron datos (trades, journal, EOD): la racha del menú se recalcula al instante. */
+function notifyDataSaved() {
+  document.dispatchEvent(new CustomEvent("quantis:data-saved"));
+}
 export function saveTrades() {
   const ok = safeSetItem(TK, JSON.stringify(trades));
   syncStateToServer("trades");
+  if (ok) notifyDataSaved();
   return ok;
 }
 export function saveJournals() {
   const ok = safeSetItem(JK, JSON.stringify(journals));
   syncStateToServer("journals");
+  if (ok) notifyDataSaved();
   return ok;
 }
 export function saveEodEntries() {
   const ok = safeSetItem(EK, JSON.stringify(eodEntries));
   syncStateToServer("eodEntries");
+  if (ok) notifyDataSaved();
   return ok;
 }
 export function saveFrenoLog() {

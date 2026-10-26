@@ -4,12 +4,11 @@
    similares (par, tipo, día, sesión, estado emocional).
    ============================================================ */
 
-import { trades, journals, load } from "./state.js";
-import { themeColors } from "./utils.js";
+import { trades, journals } from "./state.js";
+import { themeColors, nowHHMM } from "./utils.js";
 
 // [window] onclick="simular()"
 export function simular() {
-  load();
   const T = themeColors();
   const par = document.getElementById("sim-par").value;
   const tipo = document.getElementById("sim-tipo").value;
@@ -93,7 +92,7 @@ export function simular() {
   const entry = document.createElement("div");
   entry.style.cssText =
     "font-size:11px;padding:5px 0;border-bottom:1px solid var(--border);font-family:var(--mono);color:var(--text2)";
-  entry.textContent = `${new Date().toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" })} · ${par} ${tipo} · WR ${avgScore}% · EV ${expVal.toFixed(2)} · ${rec ? "Favorable" : "Precaucion"}`;
+  entry.textContent = `${nowHHMM()} · ${par} ${tipo} · WR ${avgScore}% · EV ${expVal.toFixed(2)} · ${rec ? "Favorable" : "Precaucion"}`;
   if (hist.children[0] && hist.children[0].tagName !== "DIV")
     hist.innerHTML = "";
   hist.prepend(entry);

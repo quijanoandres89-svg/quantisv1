@@ -21,7 +21,7 @@
    localStorage nueva para algo tan menor.
    ============================================================ */
 
-import { trades, journals, challenges, plantillas, ruleSets, load, resetServerState } from "./state.js";
+import { trades, journals, challenges, plantillas, ruleSets, resetServerState } from "./state.js";
 import * as Backup from "./backup.js";
 import * as ImageStore from "./imageStore.js";
 import { queueToastAfterReload, showToast } from "./toast.js";
@@ -30,6 +30,8 @@ import { getMyProfile, saveMyDisplayName, ROLE_LABEL } from "./admin.js";
 import { updateSessionDisplayName } from "./auth.js";
 import { profileAvatarRowHTML } from "./avatar.js";
 import { escapeHTML } from "./utils.js";
+import * as Sounds from "./sounds.js";
+import * as Notifier from "./notifier.js";
 
 let activeSectionId = null;
 let escListenerAttached = false;
@@ -216,6 +218,99 @@ export async function saveProfileName() {
 }
 
 /* ------------------------------------------------------------
+   Sonidos y avisos (Fase H)
+   Sonidos propios de Quantis (llamadas, invitaciones, aprobaciones, fin del
+   freno) con interruptor y volumen, y avisos que llegan aunque no estés
+   mirando la app: parpadeo del título + notificación del sistema.
+   ------------------------------------------------------------ */
+function renderSoundsSection(container) {
+  const perm = Notifier.notificationPermission();
+  const permInfo = {
+    granted: { txt: "Activadas", cls: "var(--acc)" },
+    denied: { txt: "Bloqueadas por el navegador", cls: "var(--red)" },
+    default: { txt: "Sin activar", cls: "var(--text3)" },
+    unsupported: { txt: "No disponibles en este navegador", cls: "var(--text3)" },
+  }[perm];
+  const vol = Math.round(Sounds.getVolume() * 100);
+  const tests = [
+    ["join", "Unirse a llamada"],
+    ["leave", "Salir de llamada"],
+    ["invite", "Invitación"],
+    ["approved", "Aprobado"],
+    ["request", "Solicitud"],
+    ["freno", "Fin del freno"],
+  ];
+  container.innerHTML = `
+    <div class="settings-section-title">Sonidos y avisos</div>
+    <div class="settings-section-sub">Sonidos para llamadas, invitaciones, aprobaciones y el fin del Freno de 5 minutos, y avisos para enterarte aunque no estés mirando Quantis.</div>
+
+    <div class="settings-section-title" style="font-size:13px">Sonidos</div>
+    <div class="snd-row">
+      <div><strong>Activar sonidos</strong><div class="snd-hint">Llamadas, invitaciones y alarma del freno.</div></div>
+      <label class="switch"><input type="checkbox" ${Sounds.soundEnabled() ? "checked" : ""} onchange="setSoundsEnabled(this.checked)" /><span class="switch-track"></span></label>
+    </div>
+    <div class="snd-row">
+      <div style="flex:1"><strong>Volumen</strong><div class="snd-hint">Se guarda solo en este dispositivo.</div></div>
+      <input type="range" min="0" max="100" value="${vol}" class="snd-range" aria-label="Volumen" oninput="setSoundVolume(this.value)" onchange="testSound('invite')" />
+    </div>
+    <div class="snd-tests">
+      ${tests.map(([k, label]) => `<button class="btn btn-sm" onclick="testSound('${k}')">${Sounds.SOUND_NAMES.includes(k) ? '<span class="material-symbols-outlined">play_arrow</span>' : ""}${label}</button>`).join("")}
+    </div>
+
+    <div class="settings-section-title" style="font-size:13px;margin-top:22px">Avisos cuando no estás mirando la app</div>
+    <div class="snd-row">
+      <div><strong>Notificaciones del sistema</strong><div class="snd-hint" style="color:${permInfo.cls}">${permInfo.txt}</div></div>
+      ${
+        perm === "default"
+          ? `<button class="btn btn-sm btn-p" onclick="enableSystemNotifications()">Activar</button>`
+          : perm === "granted"
+            ? `<div style="display:flex;gap:8px;align-items:center"><button class="btn btn-sm" onclick="testSystemNotification()">Probar</button><label class="switch"><input type="checkbox" ${Notifier.systemNotifsEnabled() ? "checked" : ""} onchange="setSystemNotifs(this.checked)" /><span class="switch-track"></span></label></div>`
+            : ""
+      }
+    </div>
+    ${perm === "denied" ? `<div class="snd-hint" style="margin:-4px 0 12px">Para activarlas: toca el candado junto a la dirección de la página → Notificaciones → Permitir, y vuelve a abrir esta sección.</div>` : ""}
+    <div class="snd-row">
+      <div><strong>Parpadeo del título de la pestaña</strong><div class="snd-hint">"(2) Quantis" ↔ "🔔 Nueva invitación" hasta que vuelvas.</div></div>
+      <label class="switch"><input type="checkbox" ${Notifier.titleFlashEnabled() ? "checked" : ""} onchange="setTitleFlash(this.checked)" /><span class="switch-track"></span></label>
+    </div>
+    <div class="snd-hint" style="margin-top:14px;line-height:1.6">
+      Estos avisos funcionan mientras Quantis siga abierto, aunque esté en segundo plano o como app instalada.
+      Con la app cerrada del todo no llegan (para eso hacen falta notificaciones push, que se pueden añadir más adelante).
+      En celulares el sistema puede silenciar las páginas en segundo plano.
+    </div>
+  `;
+}
+
+// [window] handlers de la sección "Sonidos y avisos"
+export function setSoundsEnabled(on) {
+  Sounds.setSoundEnabled(on);
+  if (on) Sounds.playSound("invite");
+}
+export function setSoundVolume(v) {
+  Sounds.setVolume(parseInt(v, 10) / 100);
+}
+export function testSound(name) {
+  const was = Sounds.soundEnabled();
+  if (!was) Sounds.setSoundEnabled(true); // probar un sonido con el interruptor apagado lo enciende solo para esa prueba
+  Sounds.playSound(name);
+  if (!was) Sounds.setSoundEnabled(false);
+}
+export async function enableSystemNotifications() {
+  const res = await Notifier.requestNotificationPermission();
+  if (res === "granted") await Notifier.showTestNotification();
+  selectSettingsSection("sonidos"); // repinta con el estado nuevo
+}
+export function setSystemNotifs(on) {
+  Notifier.setSystemNotifsEnabled(on);
+}
+export function setTitleFlash(on) {
+  Notifier.setTitleFlashEnabled(on);
+}
+export function testSystemNotification() {
+  Notifier.showTestNotification();
+}
+
+/* ------------------------------------------------------------
    SECCIÓN: Acerca de
    ------------------------------------------------------------
    Migrado de la antigua página "Como conectar" (page-instrucciones),
@@ -225,7 +320,6 @@ export async function saveProfileName() {
    cuenta los Conjuntos de Reglas, que la versión vieja no incluía).
    ------------------------------------------------------------ */
 function renderAboutSection(container) {
-  load();
   const trOk = trades.length > 0;
   const jOk = Object.keys(journals).length > 0;
   container.innerHTML = `
@@ -282,7 +376,6 @@ function renderAboutSection(container) {
    simple "Aceptar" de un diálogo del navegador.
    ------------------------------------------------------------ */
 function renderResetSection(container) {
-  load();
   container.innerHTML = `
     <div class="settings-section-title" style="color:var(--red)">Restablecer QUANTIS</div>
     <div class="settings-section-sub">Borra todos los datos guardados en este navegador y deja la app como recién instalada.</div>
@@ -381,6 +474,7 @@ export async function confirmResetQuantis() {
    ------------------------------------------------------------ */
 const SECTIONS = [
   { id: "perfil", label: "Perfil", icon: "person", render: renderProfileSection },
+  { id: "sonidos", label: "Sonidos y avisos", icon: "notifications_active", render: renderSoundsSection },
   { id: "instrumentos", label: "Pares e instrumentos", icon: "candlestick_chart", render: Instruments.renderInstrumentsSection },
   { id: "backups", label: "Copias de seguridad", icon: "cloud_upload", render: renderBackupsSection },
   { id: "exportar", label: "Exportar datos", icon: "download", render: renderExportSection },

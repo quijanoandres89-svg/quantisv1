@@ -21,6 +21,7 @@ import { getSupabase, getCurrentUser } from "./supabaseClient.js";
 import { escapeHTML, fmtDate } from "./utils.js";
 import { avatarHTML } from "./avatar.js";
 import * as RoomCall from "./roomCall.js";
+import { notifyUser } from "./notifier.js";
 import { prepareFile, uploadRoomFile, attachmentHTML, hydrateAttachments, purgeRoomFiles, fmtSize } from "./roomFiles.js";
 import { showToast } from "./toast.js";
 import { getMyRole } from "./admin.js";
@@ -130,6 +131,19 @@ export function switchRoomsTab(tab) {
 export function filterRooms(q) {
   roomsQuery = q || "";
   renderRoomsList();
+}
+
+/** Lleva al usuario a Salas (al tocar una notificación del sistema). */
+function goToRooms() {
+  const btn = [...document.querySelectorAll(".ni")].find((n) => (n.getAttribute("onclick") || "").includes("'salas'"));
+  window.focus();
+  if (window.go) window.go("salas", btn);
+}
+
+/** Aviso completo: el toast de siempre + sonido + (si no estás mirando la app) parpadeo del título y notificación del sistema. */
+function alertUser(type, sound, title, body, tag) {
+  showToast(type, title, body);
+  notifyUser({ title, body, sound, tag, onClick: goToRooms });
 }
 
 /** Aviso rojo en "Salas" del menú (y punto en el botón del menú en celular):
@@ -479,9 +493,9 @@ async function syncRooms() {
       const now = roleIn(r);
       const was = prevRole.get(r.id);
       if (now === "invited" && was !== "invited") {
-        showToast("info", "Nueva invitación", `Te invitaron a «${r.name}». Revisa la pestaña Invitaciones.`);
+        alertUser("info", "invite", "Nueva invitación", `Te invitaron a «${r.name}». Revisa la pestaña Invitaciones.`, `invite-${r.id}`);
       } else if (now === "approved" && was === "pending") {
-        showToast("success", "¡Te aprobaron!", `Ya puedes entrar a «${r.name}».`);
+        alertUser("success", "approved", "¡Te aprobaron!", `Ya puedes entrar a «${r.name}».`, `approved-${r.id}`);
       }
       if (r.created_by === myUserId) {
         const before = prevPending.get(r.id) || new Set();
@@ -489,7 +503,7 @@ async function syncRooms() {
         if (fresh.length) {
           await ensureProfiles(fresh.map((m) => m.user_id));
           const names = fresh.map((m) => profileName(m.user_id)).join(", ");
-          showToast("info", "Nueva solicitud", `${names} quiere${fresh.length > 1 ? "n" : ""} unirse a «${r.name}».`);
+          alertUser("info", "request", "Nueva solicitud", `${names} quiere${fresh.length > 1 ? "n" : ""} unirse a «${r.name}».`, `request-${r.id}`);
         }
       }
     }

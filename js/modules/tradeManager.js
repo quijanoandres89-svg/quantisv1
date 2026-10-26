@@ -146,7 +146,19 @@ export function updateResPreview() {
  * y todo lo que la llama (main.js) esperan la promesa antes de seguir.
  */
 // [window] onclick="saveTrade()" en el botón "Registrar trade"
+let savingTrade = false; // evita duplicados por doble clic mientras se guardan las capturas
+
 export async function saveTrade(force = false) {
+  if (savingTrade) return false;
+  savingTrade = true;
+  try {
+    return await saveTradeInner(force);
+  } finally {
+    savingTrade = false;
+  }
+}
+
+async function saveTradeInner(force) {
   const rrRaw = document.getElementById("t-rr").value;
   if (rrRaw === "") {
     showToast(

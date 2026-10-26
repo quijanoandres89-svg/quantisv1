@@ -8,8 +8,25 @@
 
 import { trades, journals } from "./state.js";
 
+/** Zona horaria de la app: Colombia (UTC-5, sin horario de verano).
+ * Todas las fechas "de hoy" se calculan en esta zona, no en UTC: con
+ * toISOString() lo registrado después de las 7 p. m. quedaba con la
+ * fecha de mañana. */
+export const APP_TZ = "America/Bogota";
+
+/** Fecha de hoy (yyyy-mm-dd) en hora de Colombia. */
 export function today() {
-  return new Date().toISOString().slice(0, 10);
+  return new Date().toLocaleDateString("en-CA", { timeZone: APP_TZ });
+}
+
+/** Hora actual "HH:MM" (24 h) en hora de Colombia. */
+export function nowHHMM() {
+  return new Date().toLocaleTimeString("es-CO", {
+    timeZone: APP_TZ,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
 }
 
 /** Fecha (yyyy-mm-dd) de hace N días — mismo método que today()
@@ -18,9 +35,7 @@ export function today() {
  * o la racha de journaling podría desalinearse cerca de medianoche
  * según el huso horario del navegador. */
 export function daysAgo(n) {
-  const d = new Date();
-  d.setDate(d.getDate() - n);
-  return d.toISOString().slice(0, 10);
+  return addDaysStr(today(), -n);
 }
 
 export function fmtDate(d) {
@@ -39,16 +54,17 @@ export function fmtShort(d) {
 }
 
 export function weekStart(d) {
-  const dt = new Date(d + "T12:00:00"),
-    dow = dt.getDay(),
+  // Aritmética en UTC al mediodía: independiente de la zona del navegador.
+  const dt = new Date(d + "T12:00:00Z"),
+    dow = dt.getUTCDay(),
     m = new Date(dt);
-  m.setDate(dt.getDate() - (dow === 0 ? 6 : dow - 1));
+  m.setUTCDate(dt.getUTCDate() - (dow === 0 ? 6 : dow - 1));
   return m.toISOString().slice(0, 10);
 }
 
 export function weekEnd(ws) {
-  const d = new Date(ws + "T12:00:00");
-  d.setDate(d.getDate() + 6);
+  const d = new Date(ws + "T12:00:00Z");
+  d.setUTCDate(d.getUTCDate() + 6);
   return d.toISOString().slice(0, 10);
 }
 
@@ -58,8 +74,8 @@ export function weekEnd(ws) {
  * semana sin repetir aritmética de fechas en cada módulo que la
  * necesite. */
 export function addDaysStr(d, n) {
-  const dt = new Date(d + "T12:00:00");
-  dt.setDate(dt.getDate() + n);
+  const dt = new Date(d + "T12:00:00Z");
+  dt.setUTCDate(dt.getUTCDate() + n);
   return dt.toISOString().slice(0, 10);
 }
 
@@ -69,7 +85,7 @@ export function addDaysStr(d, n) {
  * tampoco tiene sesión real. Usado por la racha de journaling para
  * que el fin de semana no cuente como día "perdido". */
 export function isWeekend(d) {
-  const dow = new Date(d + "T12:00:00").getDay();
+  const dow = new Date(d + "T12:00:00Z").getUTCDay();
   return dow === 0 || dow === 6;
 }
 
@@ -144,8 +160,8 @@ export function escapeHTML(str) {
 
 /** Formatea un número USD con signo explícito, ej: +$150.00 / -$75.00 */
 export function fmtUSD(v) {
-  const sign = v >= 0 ? " " : "";
-  return `${sign}$${v.toFixed(2)}`;
+  const sign = v >= 0 ? "+" : "-";
+  return `${sign}$${Math.abs(v).toFixed(2)}`;
 }
 
 /** Lee el valor resuelto de una variable CSS del tema activo (oscuro/claro). */
