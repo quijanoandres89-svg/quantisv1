@@ -756,25 +756,39 @@
           </button>
         </div>
         <div class="sidebar-footer">
-          <div class="sidebar-footer-row">
-            <button id="open-settings-btn" class="ni" onclick="openSettings()">
-              <span class="material-symbols-outlined" style="font-size: 15px">
-                settings
-              </span>
-              Configuración
-            </button>
-            <div
-              class="sidebar-streak-compact"
-              id="sidebar-streak"
-              style="display: none"
-            >
-              <span class="material-symbols-outlined"
-                >local_fire_department</span
-              ><span id="sidebar-streak-n"></span>
+        <div
+          class="streak-card is-zero"
+          id="sidebar-streak"
+          data-tooltip="Registra un trade, tu journal o un EOD para empezar tu racha"
+          title="Registra un trade, tu journal o un EOD para empezar tu racha"
+        >
+          <div class="streak-flame">
+            <span class="material-symbols-outlined">local_fire_department</span>
+          </div>
+          <div class="streak-info">
+            <div class="streak-title">
+              <b id="sidebar-streak-n">0</b
+              ><span id="sidebar-streak-unit"> días</span>
+            </div>
+            <div class="streak-sub" id="sidebar-streak-sub">
+              Registra algo hoy para empezar
             </div>
           </div>
-          <div class="sidebar-session" id="sidebar-session"></div>
         </div>
+        <div class="sidebar-user-row">
+          <div class="sidebar-session" id="sidebar-session"></div>
+          <button
+            id="open-settings-btn"
+            class="sb-icon-btn"
+            onclick="openSettings()"
+            data-tooltip="Configuración"
+            title="Configuración"
+            aria-label="Configuración"
+          >
+            <span class="material-symbols-outlined">settings</span>
+          </button>
+        </div>
+      </div>
       </nav>
 
       <main class="main">
