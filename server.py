@@ -14,5 +14,5 @@ class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
 
 with ThreadedTCPServer(("127.0.0.1", PORT), http.server.SimpleHTTPRequestHandler) as httpd:
     print(f"QUANTIS ejecutándose en http://127.0.0.1:{PORT}")
-    webbrowser.open(f"http://127.0.0.1:{PORT}/Quantis.html")
+    webbrowser.open(f"http://127.0.0.1:{PORT}/index.html")
     httpd.serve_forever()
