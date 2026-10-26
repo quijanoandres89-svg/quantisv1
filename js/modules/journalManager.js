@@ -19,8 +19,8 @@
    - Tier 3: autosave silencioso con indicador, resumen semanal.
    ============================================================ */
 
-import { journals, eodEntries, preChecks, dayScore, setDayScore, saveJournals, CL } from "./state.js";
-import { today, daysAgo, addDaysStr, isWeekend, fmtDate, weekStart, escapeHTML, paginate, paginationControlsHTML } from "./utils.js";
+import { journals, trades, eodEntries, preChecks, dayScore, setDayScore, saveJournals, CL } from "./state.js";
+import { today, nowHHMM, daysAgo, addDaysStr, isWeekend, fmtDate, weekStart, escapeHTML, paginate, paginationControlsHTML } from "./utils.js";
 import { updateSessionCL } from "./session.js";
 import { showToast } from "./toast.js";
 
@@ -192,24 +192,39 @@ export function updateJournalProgress() {
 /* ------------------------------------------------------------
    Tier 2.7 / 3.9 — racha de journaling + resumen semanal
    ------------------------------------------------------------ */
+/** ¿Este journal tiene algo escrito de verdad? Un journal vacío (por ejemplo, el que antes se
+ * creaba solo al entrar a la sección) NO cuenta como dato registrado. */
+function journalHasContent(entry) {
+  if (!entry || typeof entry !== "object") return false;
+  if (Number(entry.score) > 0) return true;
+  return JOURNAL_FIELDS.some((k) => typeof entry[k] === "string" && entry[k].trim() !== "");
+}
+
+/** Días en los que registraste ALGO: un trade, un journal con contenido o un EOD. */
+export function activityDays() {
+  const days = new Set();
+  for (const t of trades) if (t && t.fecha) days.add(t.fecha);
+  for (const [d, entry] of Object.entries(journals)) if (journalHasContent(entry)) days.add(d);
+  for (const d of Object.keys(eodEntries)) days.add(d);
+  return days;
+}
+
 export function computeJournalStreak() {
-  // Cuenta hacia atrás día a día, pero el sábado y el domingo NO
-  // rompen la racha ni la hacen avanzar — forex cierra el viernes y
-  // recién reabre el domingo en la noche, así que un fin de semana
-  // "vacío" no es un día perdido, es simplemente que no había mercado.
-  // Si hoy ya tiene journal, arranca en hoy; si no, arranca ayer, para
-  // que el contador no se vea "roto" a mitad del día de hoy solo
-  // porque todavía no llegaste a guardar.
+  // Racha = días seguidos en los que registraste algo (trade, journal o EOD).
+  // Cuenta hacia atrás día a día. Un día de lunes a viernes SIN actividad la rompe.
+  // El sábado y el domingo nunca la rompen (forex está cerrado), y si ese fin de
+  // semana registraste algo, SÍ suma (antes se ignoraba aunque trabajaras).
+  // Si hoy ya hay actividad, arranca en hoy; si no, arranca ayer, para que el
+  // contador no se vea "roto" a mitad del día solo porque aún no registras nada.
+  const active = activityDays();
   let streak = 0;
-  let i = journals[today()] ? 0 : 1;
+  let i = active.has(today()) ? 0 : 1;
   for (let guard = 0; guard < 400; guard++) {
     const d = daysAgo(i);
-    if (isWeekend(d)) {
-      i++;
-      continue;
-    }
-    if (journals[d]) {
+    if (active.has(d)) {
       streak++;
+      i++;
+    } else if (isWeekend(d)) {
       i++;
     } else break;
   }
@@ -223,7 +238,7 @@ function computeWeekCount() {
   const ws = weekStart(today());
   let filled = 0;
   for (let i = 0; i < 5; i++) {
-    if (journals[addDaysStr(ws, i)]) filled++;
+    if (journalHasContent(journals[addDaysStr(ws, i)])) filled++;
   }
   return { filled, total: 5 };
 }
@@ -233,7 +248,7 @@ function computeWeekCount() {
  * hayas tenido alguna vez. Misma regla de fin de semana: sábado y
  * domingo no cuentan como día perdido. */
 export function computeBestJournalStreak() {
-  const dates = Object.keys(journals).sort();
+  const dates = [...activityDays()].sort();
   if (!dates.length) return 0;
   let best = 0;
   let current = 0;
@@ -283,17 +298,36 @@ function checkStreakMilestone(streak) {
  * racha puede cambiar. */
 // [window] no expuesta directamente — la llama main.js en init()
 export function renderSidebarStreak() {
-  const el = document.getElementById("sidebar-streak");
+  const card = document.getElementById("sidebar-streak");
   const n = document.getElementById("sidebar-streak-n");
-  if (!el || !n) return;
+  if (!card || !n) return;
   const streak = computeJournalStreak();
   const best = computeBestJournalStreak();
   n.textContent = streak;
-  el.title =
+  const unit = document.getElementById("sidebar-streak-unit");
+  if (unit) unit.textContent = streak === 1 ? " día" : " días";
+  const sub = document.getElementById("sidebar-streak-sub");
+  if (sub) {
+    sub.textContent =
+      streak === 0
+        ? "Registra algo hoy para empezar"
+        : streak >= best && streak > 1
+          ? "¡Tu mejor racha!"
+          : best > streak
+            ? `Mejor racha: ${best}`
+            : "¡Sigue así!";
+  }
+  // La tarjeta se ve SIEMPRE (con la racha en 0 invita a empezar), ya no se esconde.
+  card.classList.toggle("is-zero", streak === 0);
+  card.title = streak > 0
+    ? `${streak} día${streak === 1 ? "" : "s"} seguido${streak === 1 ? "" : "s"} registrando datos · Mejor racha: ${best}`
+    : "Registra un trade, tu journal o un EOD para empezar tu racha";
+  card.setAttribute(
+    "data-tooltip",
     streak > 0
-      ? `${streak} día${streak === 1 ? "" : "s"} seguido${streak === 1 ? "" : "s"} journaleando · Mejor racha: ${best}`
-      : "";
-  el.style.display = streak > 0 ? "flex" : "none";
+      ? `${streak} día${streak === 1 ? "" : "s"} seguido${streak === 1 ? "" : "s"} registrando datos · Mejor racha: ${best}`
+      : "Registra un trade, tu journal o un EOD para empezar tu racha",
+  );
   checkStreakMilestone(streak);
 }
 
@@ -339,7 +373,18 @@ function setAutosaveIndicator(text, saving) {
 
 function doAutosave() {
   const prev = journals[today()];
-  journals[today()] = collectJournalFields();
+  const fields = collectJournalFields();
+  // Entrar a la sección (o marcar el checklist) NO crea un journal vacío: solo se guarda si hay algo escrito
+  // o si ya existía uno de hoy. Así la racha no se activa solo por abrir el Journal.
+  if (!prev && !journalHasContent(fields)) {
+    const ind = document.getElementById("j-autosave");
+    if (ind) {
+      ind.classList.remove("saving");
+      ind.innerHTML = "";
+    }
+    return;
+  }
+  journals[today()] = fields;
   const saved = saveJournals();
   if (!saved) {
     if (prev) journals[today()] = prev;
@@ -355,7 +400,7 @@ function doAutosave() {
     }
     return;
   }
-  const hora = new Date().toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
+  const hora = nowHHMM();
   setAutosaveIndicator(`Guardado automáticamente · ${hora}`, false);
   renderJournalMeta();
 }
