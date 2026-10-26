@@ -45,6 +45,8 @@ import * as Auth from "./modules/auth.js";
 import * as Avatar from "./modules/avatar.js";
 import * as RoomCall from "./modules/roomCall.js";
 import * as RoomFiles from "./modules/roomFiles.js";
+import { initSounds } from "./modules/sounds.js";
+import { initNavUi } from "./modules/navUi.js";
 import * as Perspectives from "./modules/perspectives.js";
 
 /**
@@ -103,6 +105,13 @@ async function init() {
     if (p) Auth.updateSessionProfile(p);
   });
   Toast.showQueuedToast();
+  initNavUi(); // secciones plegables y scroll solo en el medio del menú
+  initSounds(); // el audio se "desbloquea" con el primer toque del usuario
+  let streakTimer = null;
+  document.addEventListener("quantis:data-saved", () => {
+    clearTimeout(streakTimer);
+    streakTimer = setTimeout(() => JournalManager.renderSidebarStreak(), 150); // racha al instante al registrar cualquier dato
+  });
   Rooms.startRoomsRealtime(); // avisos y refrescos de Salas desde el inicio, no solo al abrir esa sección
   await State.load();
   Instruments.renderAllInstrumentSelects();
@@ -232,6 +241,13 @@ Object.assign(window, {
   toggleResetButton: SettingsPanel.toggleResetButton,
   confirmResetQuantis: SettingsPanel.confirmResetQuantis,
   saveProfileName: SettingsPanel.saveProfileName,
+  setSoundsEnabled: SettingsPanel.setSoundsEnabled,
+  setSoundVolume: SettingsPanel.setSoundVolume,
+  testSound: SettingsPanel.testSound,
+  enableSystemNotifications: SettingsPanel.enableSystemNotifications,
+  setSystemNotifs: SettingsPanel.setSystemNotifs,
+  setTitleFlash: SettingsPanel.setTitleFlash,
+  testSystemNotification: SettingsPanel.testSystemNotification,
   openAvatarPicker: Avatar.openAvatarPicker,
   removeMyAvatar: Avatar.removeMyAvatar,
   // instruments (pares configurables)
