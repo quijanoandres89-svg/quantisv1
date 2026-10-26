@@ -4415,3 +4415,381 @@ img.persp-img {
   color: var(--green);
   border: 1px solid var(--gbr);
 }
+
+/* Configuración → Sonidos y avisos */
+.snd-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+.snd-hint {
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--text3);
+}
+.snd-range {
+  width: 180px;
+  padding: 0;
+  border: none;
+  background: none;
+  accent-color: var(--acc);
+}
+.snd-tests {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 14px 0 4px;
+}
+
+/* ============================================================
+   MENÚ LATERAL "PREMIUM" (Fase I) — cristal translúcido estilo iOS
+   · Fijo arriba (logo, semáforo, challenge) y abajo (racha, usuario,
+     configuración); scroll solo en el medio.
+   · El cristal se ve porque el fondo de la página tiene luces de color
+     suaves detrás; el contenido (.main) mantiene su fondo sólido.
+   ============================================================ */
+:root {
+  --glass: rgba(30, 34, 40, 0.58);
+  --glass-strong: rgba(38, 43, 50, 0.80);
+  --glass-border: rgba(255, 255, 255, 0.10);
+  --glass-hi: rgba(255, 255, 255, 0.06);
+  --amb1: rgba(0, 200, 83, 0.20);
+  --amb2: rgba(80, 110, 255, 0.17);
+  --amb3: rgba(249, 115, 22, 0.10);
+}
+body.light {
+  --glass: rgba(255, 255, 255, 0.58);
+  --glass-strong: rgba(255, 255, 255, 0.84);
+  --glass-border: rgba(255, 255, 255, 0.85);
+  --glass-hi: rgba(255, 255, 255, 0.75);
+  --amb1: rgba(0, 200, 83, 0.24);
+  --amb2: rgba(80, 120, 255, 0.22);
+  --amb3: rgba(255, 170, 60, 0.20);
+}
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(520px 420px at 4% 8%, var(--amb1), transparent 70%),
+    radial-gradient(560px 460px at 2% 98%, var(--amb2), transparent 70%),
+    radial-gradient(420px 360px at 32% 55%, var(--amb3), transparent 70%);
+}
+.sidebar {
+  overflow: hidden;
+  scrollbar-gutter: auto;
+  background: linear-gradient(160deg, var(--glass-strong), var(--glass));
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  border: 1px solid var(--glass-border);
+}
+@media (min-width: 1024px) {
+  .sidebar {
+    align-self: flex-start;
+    margin: 10px 0 10px 10px;
+    height: calc(100vh - 20px);
+    height: calc(100dvh - 20px);
+    border-radius: 24px;
+    box-shadow:
+      0 10px 40px rgba(0, 0, 0, 0.28),
+      inset 0 1px 0 var(--glass-hi);
+  }
+}
+@media (max-width: 1023px) {
+  .sidebar {
+    height: 100vh;
+    height: 100dvh;
+    border-radius: 0 24px 24px 0;
+  }
+}
+.brand,
+#sem-sb-wrap,
+#ch-sb {
+  flex-shrink: 0;
+}
+.brand {
+  padding: 18px 16px 8px;
+}
+.sem-sb {
+  margin: 8px 12px;
+  border-radius: 14px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: inset 0 1px 0 var(--glass-hi);
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s;
+}
+.sem-sb:hover {
+  transform: translateY(-1px);
+}
+/* zona con scroll */
+.sidebar .nav {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 4px 10px 10px;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border2) transparent;
+}
+.sidebar .nav::-webkit-scrollbar {
+  width: 6px;
+}
+.sidebar .nav.fade-top {
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 22px);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 22px);
+}
+.sidebar .nav.fade-bottom {
+  -webkit-mask-image: linear-gradient(to top, transparent 0, #000 26px);
+  mask-image: linear-gradient(to top, transparent 0, #000 26px);
+}
+.sidebar .nav.fade-top.fade-bottom {
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 22px, #000 calc(100% - 26px), transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 22px, #000 calc(100% - 26px), transparent 100%);
+}
+/* secciones plegables */
+.nav-sec {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin: 8px 0 2px;
+  padding: 6px 8px;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--text3);
+  background: none;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.nav-sec:hover {
+  color: var(--text2);
+  background: var(--glass-hi);
+}
+.nav-sec .chev {
+  font-size: 16px;
+  transition: transform 0.25s;
+}
+.nav-sec[aria-expanded="false"] .chev {
+  transform: rotate(-90deg);
+}
+.nav-group {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 0.26s ease;
+}
+.nav-group.collapsed {
+  grid-template-rows: 0fr;
+}
+.nav-group-inner {
+  min-height: 0;
+  overflow: hidden;
+}
+/* ítems */
+.sidebar .ni {
+  border-radius: 12px;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    transform 0.15s,
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+.sidebar .ni:hover {
+  background: var(--glass-hi);
+  transform: translateX(2px);
+}
+.sidebar .ni.active {
+  color: var(--acc);
+  font-weight: 600;
+  background: linear-gradient(90deg, var(--abg), rgba(0, 200, 83, 0.03));
+  border-color: var(--accbr);
+  box-shadow:
+    inset 3px 0 0 var(--acc),
+    0 4px 14px rgba(0, 200, 83, 0.10);
+}
+.sidebar .ni.active svg {
+  filter: drop-shadow(0 0 6px rgba(0, 200, 83, 0.45));
+}
+/* pie fijo: racha + usuario + configuración */
+.sidebar-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px 12px;
+  border-top: 1px solid var(--glass-border);
+  background: linear-gradient(0deg, var(--glass-hi), transparent);
+}
+.streak-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.22), rgba(249, 115, 22, 0.07));
+  border: 1px solid rgba(249, 115, 22, 0.30);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  animation: streakGlow 2.6s ease-in-out infinite;
+}
+.streak-flame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  background: rgba(249, 115, 22, 0.18);
+  color: var(--orange);
+}
+.streak-flame .material-symbols-outlined {
+  font-size: 22px;
+  font-variation-settings: "FILL" 1;
+  animation: streakFlicker 2.4s ease-in-out infinite;
+}
+.streak-info {
+  min-width: 0;
+}
+.streak-title b {
+  font-family: var(--mono);
+  font-size: 18px;
+  color: var(--orange);
+}
+.streak-title span {
+  font-size: 11px;
+  color: var(--text2);
+}
+.streak-sub {
+  font-size: 10.5px;
+  color: var(--text3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.streak-card.is-zero {
+  background: var(--glass-hi);
+  border-color: var(--glass-border);
+  box-shadow: none;
+  animation: none;
+}
+.streak-card.is-zero .streak-flame {
+  background: var(--bg3);
+  color: var(--text3);
+}
+.streak-card.is-zero .streak-flame .material-symbols-outlined {
+  animation: none;
+  font-variation-settings: "FILL" 0;
+}
+.streak-card.is-zero .streak-title b {
+  color: var(--text2);
+}
+.sidebar-user-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.sidebar-footer .sidebar-session {
+  flex: 1;
+  min-width: 0;
+  margin-top: 0;
+  padding: 6px 8px;
+  border-radius: 14px;
+  background: var(--glass-hi);
+  border: 1px solid var(--glass-border);
+}
+.sb-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  color: var(--text2);
+  background: var(--glass-hi);
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  cursor: pointer;
+  transition:
+    transform 0.15s,
+    color 0.15s,
+    background 0.15s;
+}
+.sb-icon-btn:hover {
+  color: var(--acc);
+  transform: rotate(45deg);
+}
+.sb-icon-btn .material-symbols-outlined {
+  font-size: 20px;
+}
+
+/* ============================================================
+   Revisión Fases H/I — accesibilidad, rendimiento y pantallas bajas
+   ============================================================ */
+/* Las secciones plegadas no deben poder enfocarse con el teclado ni leerse con lector de pantalla. */
+.nav-group-inner {
+  transition: visibility 0s linear 0s;
+}
+.nav-group.collapsed .nav-group-inner {
+  visibility: hidden;
+  transition: visibility 0s linear 0.26s;
+}
+/* Un filtro de desenfoque dentro de otro filtro de desenfoque no se ve y cuesta rendimiento. */
+.sidebar .sem-sb {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+/* Navegadores sin backdrop-filter: fondo sólido legible en vez de un panel casi transparente. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .sidebar {
+    background: var(--bg2);
+  }
+}
+/* Pantallas bajas (celular horizontal, ventanas pequeñas): compacta los bloques fijos
+   para que la lista de pantallas no se quede sin espacio. */
+@media (max-height: 640px) {
+  .brand {
+    padding: 10px 16px 4px;
+  }
+  .sidebar .sem-sb {
+    margin: 4px 12px;
+  }
+  .sidebar-footer {
+    padding: 8px 12px 10px;
+    gap: 6px;
+  }
+  .streak-card {
+    padding: 6px 10px;
+  }
+  .streak-sub {
+    display: none;
+  }
+}
+/* Sin animaciones continuas para quien las desactiva en su sistema. */
+@media (prefers-reduced-motion: reduce) {
+  .streak-card,
+  .streak-flame .material-symbols-outlined {
+    animation: none;
+  }
+  .nav-group,
+  .nav-sec .chev {
+    transition: none;
+  }
+  .sidebar .ni:hover,
+  .sb-icon-btn:hover {
+    transform: none;
+  }
+}
