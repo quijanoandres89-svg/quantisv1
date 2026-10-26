@@ -18,7 +18,7 @@
    caché vieja.
    ============================================================ */
 
-const CACHE_NAME = "quantis-shell-v2";
+const CACHE_NAME = "quantis-shell-v3";
 const APP_SHELL = ["./", "./index.html", "./manifest.json"];
 
 self.addEventListener("install", (event) => {
@@ -62,5 +62,27 @@ self.addEventListener("fetch", (event) => {
         return res;
       })
       .catch(() => caches.match(req)),
+  );
+});
+
+/* ============================================================
+   Al tocar una notificación del sistema (invitación, aprobación,
+   solicitud, fin del freno...) se enfoca la pestaña/app de Quantis
+   que ya esté abierta, o se abre una nueva, y se le avisa a la página
+   cuál notificación fue para que lleve a la pantalla correcta.
+   ============================================================ */
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const tag = event.notification.data && event.notification.data.tag;
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
+      for (const client of list) {
+        if ("focus" in client) {
+          client.postMessage({ type: "quantis-notification-click", tag });
+          return client.focus();
+        }
+      }
+      if (self.clients.openWindow) return self.clients.openWindow("./");
+    }),
   );
 });
